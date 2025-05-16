@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,9 +25,26 @@ SECRET_KEY = 'django-insecure-s4to)7crg==^7uj_v%xg4-#yoe+5kku)%y-$ea-1#$iv!56xar
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
-
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # React development server
+    "http://127.0.0.1:5173",
+]
+CSRF_TRUSTED_ORIGINS = [ "http://localhost:5173",  # React development server
+    "http://127.0.0.1:5173"
+    ]
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_USE_SESSIONS = False 
+CORS_ALLOW_CREDENTIALS = True
+AUTH_USER_MODEL = 'corevolthrm.CustomUser'
+# Session and jwt settings
+CSRF_COOKIE_SECURE = False  # True in production
+CSRF_COOKIE_HTTPONLY = True  # Required for React to read the CSRF token
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False  # True in production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,7 +55,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'corevolthrm'
+    'rest_framework_simplejwt',
+    'corsheaders',
+    'corevolthrm',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +68,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware' #for cors 
+    
 ]
 
 ROOT_URLCONF = 'corevolt.urls'
@@ -122,3 +143,18 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'corevolthrm.authentication.CookieJWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
