@@ -1,3 +1,11 @@
 .env
 hrmenv/
 venv/
+
+__pycache__/
+*/__pycache__/
+*.py[cod]
+
+db.sqlite3
+
+.vscode/
