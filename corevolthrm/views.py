@@ -5,6 +5,7 @@ import json
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from .serializers import UserRegistrationSerializer
 from django.contrib.auth import authenticate,login
@@ -14,6 +15,8 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
+from corevolthrm.models import Announcement
+from corevolthrm.serializers import AnnouncementSerializer
 
 # Create your views here.
 def profile_list(request):
@@ -61,7 +64,9 @@ def loginUser(request):
             response = JsonResponse({
                 "message": "Login successful",
                 "user": {
+                    "firstName": user.first_name,
                     "email": user.email,
+                    "isLoggedIn": True,
                     "id": user.id,
                 },
                 "csrf_token": csrf_token,  # Include CSRF token in response for frontend
@@ -139,3 +144,8 @@ def logoutUser(request):
     response.delete_cookie('access_token')
     response.delete_cookie('refresh_token')
     return response
+
+class AnnouncementList(generics.ListCreateAPIView):
+    queryset = Announcement.objects.all()
+    serializer_class = AnnouncementSerializer
+    permission_classes = [IsAuthenticated]
