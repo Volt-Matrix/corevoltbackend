@@ -61,7 +61,9 @@ def loginUser(request):
             response = JsonResponse({
                 "message": "Login successful",
                 "user": {
+                    "firstName":user.first_name,
                     "email": user.email,
+                    "isLoggedIn":True,
                     "id": user.id,
                 },
                 "csrf_token": csrf_token,  # Include CSRF token in response for frontend
@@ -135,7 +137,7 @@ def test_authenticated_view(request):
     })
    
 def logoutUser(request):
-    response = JsonResponse({"message": "Logout successful"})
+    response = JsonResponse({"message": "Logout successful",'isLogged':False})
     response.delete_cookie('access_token')
     response.delete_cookie('refresh_token')
-    return response
+    return response 
