@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 
 urlpatterns = [
@@ -8,6 +9,8 @@ urlpatterns = [
     path('csrf/',views.get_csrf_token),
     path('refresh/', views.refresh_view),
     path('test/',views.test_authenticated_view),
-    path('logout/',views.logoutUser)
-
+    path('logout/',views.logoutUser),
+    path('announcements/', views.AnnouncementList.as_view())
 ]
+
+urlpatterns = format_suffix_patterns(urlpatterns)
