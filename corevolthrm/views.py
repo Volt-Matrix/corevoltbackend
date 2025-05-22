@@ -148,4 +148,4 @@ def logoutUser(request):
 class AnnouncementList(generics.ListCreateAPIView):
     queryset = Announcement.objects.all()
     serializer_class = AnnouncementSerializer
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
