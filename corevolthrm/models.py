@@ -36,3 +36,10 @@ class Announcement(models.Model):
 
     class Meta:
         ordering = ['-created']
+
+class Holiday(models.Model):
+    name = models.CharField(max_length = 30, blank=False)
+    date = models.DateField()
+
+    class Meta:
+        ordering = ['date']

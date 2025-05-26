@@ -15,8 +15,8 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
-from corevolthrm.models import Announcement
-from corevolthrm.serializers import AnnouncementSerializer
+from corevolthrm.models import Announcement, Holiday
+from corevolthrm.serializers import AnnouncementSerializer, HolidaySerializer
 
 # Create your views here.
 def profile_list(request):
@@ -149,3 +149,8 @@ class AnnouncementList(generics.ListCreateAPIView):
     queryset = Announcement.objects.all()
     serializer_class = AnnouncementSerializer
     permission_classes = [IsAuthenticated]
+
+class HolidayList(generics.ListAPIView):
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer
+    # permission_classes = [IsAuthenticated]
