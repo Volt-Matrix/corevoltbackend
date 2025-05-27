@@ -10,7 +10,6 @@ urlpatterns = [
     path('refresh/', views.refresh_view),
     path('test/',views.test_authenticated_view),
     path('logout/',views.logoutUser),
-    path('announcements/', views.AnnouncementList.as_view())
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

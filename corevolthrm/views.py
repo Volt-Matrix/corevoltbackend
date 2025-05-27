@@ -15,9 +15,6 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
-from corevolthrm.models import Announcement
-from corevolthrm.serializers import AnnouncementSerializer
-
 # Create your views here.
 def profile_list(request):
     if request.method == 'GET':
@@ -144,8 +141,3 @@ def logoutUser(request):
     response.delete_cookie('access_token')
     response.delete_cookie('refresh_token')
     return response
-
-class AnnouncementList(generics.ListCreateAPIView):
-    queryset = Announcement.objects.all()
-    serializer_class = AnnouncementSerializer
-    permission_classes = [IsAuthenticated]
