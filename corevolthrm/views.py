@@ -68,7 +68,7 @@ def loginUser(request):
                     "isLoggedIn": True,
                     "id": user.id,
                 },
-                "csrf_token": csrf_token,  # Include CSRF token in response for frontend
+                "csrf_token": csrf_token, 
             })
             
             # Set refresh token (7 days)
