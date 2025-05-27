@@ -144,8 +144,12 @@ def logoutUser(request):
     response.delete_cookie('access_token')
     response.delete_cookie('refresh_token')
     return response
-
+# @api_view(["POST"])
 class AnnouncementList(generics.ListCreateAPIView):
     queryset = Announcement.objects.all()
     serializer_class = AnnouncementSerializer
     permission_classes = [IsAuthenticated]
+
+@api_view(["GET"])
+def AddEmployee(request):
+    return JsonResponse({'message':"request received"})
