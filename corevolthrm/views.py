@@ -6,14 +6,16 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
-from rest_framework.permissions import AllowAny
-from .serializers import UserRegistrationSerializer
-from django.contrib.auth import authenticate,login
-from django.views.decorators.http import require_POST,require_GET
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer
+from django.contrib.auth import authenticate
+from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
-from rest_framework.decorators import api_view,permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
+from corevolthrm.models import Announcement, LeaveApplication
+from corevolthrm.serializers import AnnouncementSerializer
+
 
 # Create your views here.
 def profile_list(request):
@@ -141,3 +143,45 @@ def logoutUser(request):
     response.delete_cookie('access_token')
     response.delete_cookie('refresh_token')
     return response
+
+class LeaveApplicationListCreate(generics.ListCreateAPIView):
+    serializer_class = LeaveApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return LeaveApplication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class LeaveApplicationDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = LeaveApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return LeaveApplication.objects.filter(user=self.request.user)
+
+# Approve leave
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_leave(request, pk):
+    try:
+        leave = LeaveApplication.objects.get(pk=pk, user=request.user)
+        leave.status = "Approved"
+        leave.save()
+        return Response({"message": "Leave approved"}, status=status.HTTP_200_OK)
+    except LeaveApplication.DoesNotExist:
+        return Response({"error": "Leave not found"}, status=status.HTTP_404_NOT_FOUND)
+
+# Reject leave
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reject_leave(request, pk):
+    try:
+        leave = LeaveApplication.objects.get(pk=pk, user=request.user)
+        leave.status = "Rejected"
+        leave.save()
+        return Response({"message": "Leave rejected"}, status=status.HTTP_200_OK)
+    except LeaveApplication.DoesNotExist:
+        return Response({"error": "Leave not found"}, status=status.HTTP_404_NOT_FOUND)
