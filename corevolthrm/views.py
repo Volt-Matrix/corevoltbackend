@@ -13,8 +13,8 @@ from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import Announcement, LeaveApplication
-from corevolthrm.serializers import AnnouncementSerializer
+from corevolthrm.models import LeaveApplication
+
 
 
 # Create your views here.
