@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from corevolthrm.models import Announcement
+
 
 User = get_user_model()
 
@@ -27,8 +27,3 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password2')
         user = User.objects.create_user(**validated_data)
         return user
-
-class AnnouncementSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Announcement
-        fields = '__all__'
