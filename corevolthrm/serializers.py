@@ -2,6 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from corevolthrm.models import Announcement
+from .models import LeaveRequest
+
+
 
 User = get_user_model()
 
@@ -32,3 +35,11 @@ class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = '__all__'
+
+
+class LeaveRequestSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = LeaveRequest
+        fields = ['id', 'user_email', 'department', 'type', 'from_date', 'to_date', 'reason', 'status', 'applied_on']

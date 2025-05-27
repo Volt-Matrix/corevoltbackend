@@ -1,5 +1,9 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser,BaseUserManager
+from django.contrib.auth.models import User
+from django.conf import settings
+
 
 # Create your models here.
 class CustomUserManager(BaseUserManager):
@@ -36,3 +40,22 @@ class Announcement(models.Model):
 
     class Meta:
         ordering = ['-created']
+
+class LeaveRequest(models.Model):
+    LEAVE_STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,related_name='leave_requests')
+    department = models.CharField(max_length=100)
+    type = models.CharField(max_length=50)
+    from_date = models.DateField()
+    to_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=20, choices=LEAVE_STATUS_CHOICES, default='Pending')
+    applied_on = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.type}"

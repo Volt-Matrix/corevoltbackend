@@ -15,8 +15,16 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
+from rest_framework import viewsets
+
 from corevolthrm.models import Announcement
 from corevolthrm.serializers import AnnouncementSerializer
+
+from rest_framework.permissions import IsAdminUser
+
+from .models import LeaveRequest
+from .serializers import LeaveRequestSerializer
+
 
 # Create your views here.
 def profile_list(request):
@@ -43,7 +51,9 @@ def RegisterView(request):
                     "phone": user.phone
                 }
             }, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print("Serializer error:",serializer.errors)
+            return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 @require_POST
 def loginUser(request):
@@ -149,3 +159,14 @@ class AnnouncementList(generics.ListCreateAPIView):
     queryset = Announcement.objects.all()
     serializer_class = AnnouncementSerializer
     permission_classes = [IsAuthenticated]
+    
+# GET all leave requests (admin)
+class LeaveRequestListAPIView(generics.ListAPIView):
+    queryset = LeaveRequest.objects.all()
+    serializer_class = LeaveRequestSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser] 
+class LeaveRequestUpdateAPIView(generics.UpdateAPIView):
+    queryset = LeaveRequest.objects.all()
+    serializer_class = LeaveRequestSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    http_method_names = ['patch']
