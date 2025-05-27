@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from corevolthrm.models import Announcement
+from corevolthrm.models import Announcement,Profiles
 
 User = get_user_model()
 
@@ -31,4 +31,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
+        fields = '__all__'
+
+
+class ProfilesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profiles
         fields = '__all__'
