@@ -14,4 +14,4 @@ class AnnouncementList(generics.ListCreateAPIView):
 class HolidayList(generics.ListAPIView):
     queryset = Holiday.objects.all()
     serializer_class = HolidaySerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
