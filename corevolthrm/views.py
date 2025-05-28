@@ -68,7 +68,8 @@ def loginUser(request):
                     "email": user.email,
                     "isLoggedIn": True,
                     "id": user.id,
-                    'role':role
+                    'role':role,
+                    'permission_list':''
                 },
                 "csrf_token": csrf_token,  # Include CSRF token in response for frontend
             })
