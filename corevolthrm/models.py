@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser,BaseUserManager
+from django.conf import settings
+
 from django.contrib.auth import get_user_model
 # Create your models here.
 class CustomUserManager(BaseUserManager):
@@ -29,6 +31,29 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.email
     
+class LeaveApplication(models.Model):
+    LEAVE_TYPES = [
+        ("Sick", "Sick Leave"),
+        ("Casual", "Casual Leave"),
+        ("Earned", "Earned Leave"),
+    ]
+    STATUS_CHOICES = [
+        ("Pending", "Pending"),
+        ("Approved", "Approved"),
+        ("Rejected", "Rejected"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="leave_applications")
+    leaveType = models.CharField(max_length=10, choices=LEAVE_TYPES)
+    startDate = models.DateField()
+    endDate = models.DateField()
+    reason = models.TextField()
+    contactDuringLeave = models.CharField(max_length=100, blank=True)
+    attachment = models.FileField(upload_to="attachments/", null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="Pending")
+
+    def __str__(self):
+        return f"{self.user.email} - {self.leaveType} ({self.startDate} to {self.endDate})"
 class Announcement(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=100, blank=False)
