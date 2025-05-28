@@ -17,7 +17,7 @@ urlpatterns = [
     path('leave/', LeaveApplicationListCreate.as_view(), name='leave-list'),
     path('leave/<int:pk>/', LeaveApplicationDetail.as_view(), name='leave-detail'),
     path('leave/<int:pk>/approve/', approve_leave, name='leave-approve'),
-    path('leave/<int:pk>/reject/', reject_leave, name='leave-reject')
+    path('leave/<int:pk>/reject/', reject_leave, name='leave-reject'),
     path('link-employee/',views.AddEmployee)
 ]
 
