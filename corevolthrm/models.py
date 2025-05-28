@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser,BaseUserManager
 from django.conf import settings
 
 from django.contrib.auth import get_user_model
+from datetime import datetime
 # Create your models here.
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -164,6 +165,8 @@ class Employee(models.Model):
         choices=EMPLOYMENT_STATUS,
         default='active'
     )
+
+    birthday = models.DateField(blank = True, null = True, default = datetime(day=1, month=1, year=1990).date())
     
     # Manager relationship (self-referencing foreign key)
    
