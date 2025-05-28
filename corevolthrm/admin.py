@@ -2,29 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import CustomUser, LeaveApplication
-
-class CustomUserAdmin(UserAdmin):
-    model = CustomUser
-    ordering = ('email',)
-    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'is_superuser')
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
-    search_fields = ('email', 'first_name', 'last_name')
-
-    fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        (_('Personal info'), {'fields': ('first_name', 'last_name', 'phone')}),
-        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
-    )
-
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'phone', 'password1', 'password2', 'is_staff', 'is_active')}
-        ),
-    )
-
-admin.site.register(CustomUser, CustomUserAdmin)
+from corevolthrm.models import Announcement,Role,EmployeeDesignation,TeamName,Employee
 
 
 @admin.register(LeaveApplication)
@@ -36,3 +14,12 @@ class LeaveApplicationAdmin(admin.ModelAdmin):
     def get_user_fullname(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}"
     get_user_fullname.short_description = 'Employee Name'
+
+
+# Register your models here.
+admin.site.register(CustomUser)
+admin.site.register(Announcement)
+admin.site.register(Role)
+admin.site.register(EmployeeDesignation)
+admin.site.register(TeamName)
+admin.site.register(Employee)
