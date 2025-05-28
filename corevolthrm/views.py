@@ -7,13 +7,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
-from .serializers import UserRegistrationSerializer
+from .serializers import UserRegistrationSerializer,EmployeeSerializer
 from django.contrib.auth import authenticate,login
 from django.views.decorators.http import require_POST,require_GET
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view,permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
+from corevolthrm.models import Employee
 
 # Create your views here.
 def profile_list(request):
@@ -43,6 +44,7 @@ def RegisterView(request):
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 @require_POST
+@csrf_exempt
 def loginUser(request):
     if request.method != 'POST':
         return JsonResponse({"error": "Method not allowed"}, status=405)
@@ -51,7 +53,8 @@ def loginUser(request):
         email = data.get('userName')
         password = data.get('password')
         user = authenticate(request, email=email, password=password)
-        
+        employee = Employee.objects.get(user=user)
+        role = str(employee.role)
         if user is not None:
             refresh = RefreshToken.for_user(user)
             
@@ -65,6 +68,7 @@ def loginUser(request):
                     "email": user.email,
                     "isLoggedIn": True,
                     "id": user.id,
+                    'role':role
                 },
                 "csrf_token": csrf_token,  # Include CSRF token in response for frontend
             })
