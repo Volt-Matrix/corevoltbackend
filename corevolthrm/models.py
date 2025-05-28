@@ -54,13 +54,7 @@ class LeaveApplication(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.leaveType} ({self.startDate} to {self.endDate})"
-class Announcement(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    title = models.CharField(max_length=100, blank=False)
-    content = models.TextField()
 
-    class Meta:
-        ordering = ['-created']
 # Roles Model
 class Role(models.Model):
     ROLE_CHOICES = [
