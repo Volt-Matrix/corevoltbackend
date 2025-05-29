@@ -1,8 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from corevolthrm.models import LeaveApplication
-from corevolthrm.models import Employee,WorkSession
+from corevolthrm.models import Profiles, LeaveApplication, Employee, WorkSession
 
 User = get_user_model()
 
@@ -45,6 +44,12 @@ class LeaveApplicationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+class ProfilesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profiles
+        fields = '__all__'
+
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
