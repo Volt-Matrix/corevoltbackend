@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from corevolthrm.models import Profiles, LeaveApplication, Employee
+from corevolthrm.models import Profiles, LeaveApplication, Employee, WorkSession
 
 User = get_user_model()
 
@@ -54,3 +54,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['role', 'designation', 'team']
+class WorkSessionSerializer(serializers.ModelSerializer):
+    #  user = (read_only=True)
+     class Meta:
+        model = WorkSession
+        fields = ['clock_in', 'clock_out', 'total_work_time']

@@ -22,7 +22,10 @@ urlpatterns = [
     path('leave/<int:pk>/', LeaveApplicationDetail.as_view(), name='leave-detail'),
     path('leave/<int:pk>/approve/', approve_leave, name='leave-approve'),
     path('leave/<int:pk>/reject/', reject_leave, name='leave-reject'),
-    path('link-employee/',views.AddEmployee)
+    path('link-employee/',views.AddEmployee),
+    path('employee/clock-in/',views.clock_in),
+    path('employee/checkIn-check/',views.check_clockIn),
+    path('employee/clock_out/',views.clock_out)
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
