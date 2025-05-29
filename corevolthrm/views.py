@@ -7,13 +7,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer
 from django.contrib.auth import authenticate
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee
+from corevolthrm.models import LeaveApplication,Employee,WorkSession
+from datetime import timedelta
+from django.utils import timezone
+from django.core import serializers
 
 
 
@@ -193,3 +196,41 @@ def reject_leave(request, pk):
 @api_view(["GET"])
 def AddEmployee(request):
     return JsonResponse({'message':"request received"})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_clockIn(request):
+    data =  WorkSession.objects.filter(user=request.user, clock_out__isnull=True)
+    workSession = WorkSessionSerializer(data,many=True)
+    print(workSession.data)
+    res = False
+    if(workSession.data):
+        res = True
+    return Response({'clock_in':res},status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def clock_in(request):
+    if not WorkSession.objects.filter(user=request.user, clock_out__isnull=True).exists():
+       workSession =  WorkSession.objects.create(user=request.user, clock_in=timezone.now())
+    #    serializers.serialize('json',workSession)       
+       return Response({'Message:You have successfully logged-in','clock_in:True'},status=status.HTTP_200_OK)
+    else:
+       data =  WorkSession.objects.filter(user=request.user, clock_out__isnull=True)
+       workSession = WorkSessionSerializer(data,many=True)
+       print(workSession.data)
+       return Response({'session':workSession.data},status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])   
+def clock_out(request):
+    session = WorkSession.objects.filter(user=request.user, clock_out__isnull=True).first()
+    if session:
+        session.clock_out = timezone.now()
+        # Calculate total work time excluding breaks
+        total_time = session.clock_out - session.clock_in
+        total_breaks = session.total_break_time()
+        session.total_work_time = total_time - total_breaks
+
+        session.save()
+        return Response({'Message':"Successfully clocked out"},status=status.HTTP_200_OK)

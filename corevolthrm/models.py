@@ -3,6 +3,9 @@ from django.contrib.auth.models import AbstractUser,BaseUserManager
 from django.conf import settings
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
+
 from datetime import datetime
 # Create your models here.
 class CustomUserManager(BaseUserManager):
@@ -186,7 +189,6 @@ class Employee(models.Model):
                 name='unique_user_employee'
             )
         ]
-    
     def __str__(self):
         return self.employee_id
     def save(self, *args, **kwargs):
@@ -194,3 +196,23 @@ class Employee(models.Model):
     def get_is_active(self):
         """Return the full name from the related user"""
         return self.employment_status
+class WorkSession(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    clock_in = models.DateTimeField()
+    clock_out = models.DateTimeField(null=True, blank=True)
+    total_work_time = models.DurationField(null=True, blank=True)  # New field
+
+    def is_active(self):
+        return self.clock_out is None
+
+    def total_break_time(self):
+        return sum((b.end - b.start for b in self.break_set.all() if b.end), timedelta())
+
+class Break(models.Model):
+    work_session = models.ForeignKey(WorkSession, on_delete=models.CASCADE)
+    start = models.DateTimeField()
+    end = models.DateTimeField(null=True, blank=True)
+
+    def is_active(self):
+        return self.end is None
+    
