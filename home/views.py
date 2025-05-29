@@ -21,7 +21,7 @@ class HolidayList(generics.ListAPIView):
 class BirthdayList(generics.ListAPIView):
     queryset = Employee.objects.all()
     serializer_class = BirthdaySerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = self.queryset
