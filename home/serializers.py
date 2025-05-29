@@ -21,6 +21,7 @@ class BirthdaySerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     birth_day = serializers.SerializerMethodField()
     birth_month = serializers.SerializerMethodField()
+    designation_name = serializers.SerializerMethodField()
 
     def get_name(self, model_obj):
         first_name = model_obj.user.first_name
@@ -32,7 +33,10 @@ class BirthdaySerializer(serializers.ModelSerializer):
     
     def get_birth_month(self, model_obj):
         return model_obj.birthday.month
+    
+    def get_designation_name(self, model_obj):
+        return model_obj.designation.designationName
         
     class Meta:
         model = Employee
-        fields = ['name', 'birth_day', 'birth_month']
+        fields = ['name', 'birth_day', 'birth_month', 'designation_name']
