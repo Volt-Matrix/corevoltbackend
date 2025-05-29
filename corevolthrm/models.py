@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 
+from datetime import datetime
 # Create your models here.
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -57,13 +58,7 @@ class LeaveApplication(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.leaveType} ({self.startDate} to {self.endDate})"
-class Announcement(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    title = models.CharField(max_length=100, blank=False)
-    content = models.TextField()
 
-    class Meta:
-        ordering = ['-created']
 # Roles Model
 class Role(models.Model):
     ROLE_CHOICES = [
@@ -173,6 +168,8 @@ class Employee(models.Model):
         choices=EMPLOYMENT_STATUS,
         default='active'
     )
+
+    birthday = models.DateField(blank = True, null = True, default = datetime(day=1, month=1, year=1990).date())
     
     # Manager relationship (self-referencing foreign key)
    
