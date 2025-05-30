@@ -59,3 +59,10 @@ class WorkSessionSerializer(serializers.ModelSerializer):
      class Meta:
         model = WorkSession
         fields = ['clock_in', 'clock_out', 'total_work_time']
+
+class LeaveRequestSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = LeaveApplication
+        fields = '__all__'
