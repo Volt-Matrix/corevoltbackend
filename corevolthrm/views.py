@@ -100,7 +100,7 @@ def loginUser(request):
                 httponly=True,
                 secure=True,  # Use True in production
                 samesite='Lax',
-                max_age=15 * 60
+                max_age=60 * 60
             )
 
             return response
@@ -132,7 +132,7 @@ def refresh_view(request):
             httponly=True,
             secure=True,
             samesite='Lax',
-            max_age=15 * 60  # 15 minutes
+            max_age=60 * 60  # 15 minutes
         )
         return response
 
@@ -256,15 +256,18 @@ def check_clockIn(request):
     res = False
     if(workSession.data):
         res = True
-    return Response({'clock_in':res},status=status.HTTP_200_OK)
+        return Response({'clock_in':res,'session':workSession.data},status=status.HTTP_200_OK)
+    else:
+        return Response({'clock_in':res},status=status.HTTP_200_OK)
+    
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def clock_in(request):
     if not WorkSession.objects.filter(user=request.user, clock_out__isnull=True).exists():
        workSession =  WorkSession.objects.create(user=request.user, clock_in=timezone.now())
-    #    serializers.serialize('json',workSession)       
-       return Response({'Message:You have successfully logged-in','clock_in:True'},status=status.HTTP_200_OK)
+       session = WorkSessionSerializer(workSession)
+       return Response({'clock_in':True,'session':[session.data]},status=status.HTTP_200_OK)
     else:
        data =  WorkSession.objects.filter(user=request.user, clock_out__isnull=True)
        workSession = WorkSessionSerializer(data,many=True)
