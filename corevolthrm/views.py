@@ -100,7 +100,7 @@ def loginUser(request):
                 httponly=True,
                 secure=True,  # Use True in production
                 samesite='Lax',
-                max_age=15 * 60
+                max_age=60 * 60
             )
 
             return response
