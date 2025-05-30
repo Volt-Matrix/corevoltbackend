@@ -3,10 +3,10 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 from .views import ProfilesView,ProfilesDetailView
 
-from .views import LeaveApplicationListCreate, LeaveApplicationDetail
+from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import approve_leave, reject_leave
+from .views import approve_leave, reject_leave,total_users_count
 
 urlpatterns = [
     path('profile/', views.profile_list),
@@ -25,7 +25,10 @@ urlpatterns = [
     path('link-employee/',views.AddEmployee),
     path('employee/clock-in/',views.clock_in),
     path('employee/checkIn-check/',views.check_clockIn),
-    path('employee/clock_out/',views.clock_out)
+    path('employee/clock_out/',views.clock_out),
+     path('api/leave-requests/', LeaveRequestListAPIView.as_view(), name='leave-request-list'),
+    path('api/leave-requests/<int:pk>/', UpdateLeaveStatusAPIView.as_view(), name='update-leave-status'),
+    path('api/total-users/', total_users_count),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
