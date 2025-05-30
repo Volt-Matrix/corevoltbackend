@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
-from .serializers import UserRegistrationSerializer
+from .serializers import UserRegistrationSerializer,LeaveApplicationSerializer
 from django.contrib.auth import authenticate,login
 from django.views.decorators.http import require_POST,require_GET
 from django.middleware.csrf import get_token
@@ -19,11 +19,16 @@ from rest_framework import viewsets
 
 from corevolthrm.models import Announcement
 from corevolthrm.serializers import AnnouncementSerializer
-
 from rest_framework.permissions import IsAdminUser
-
 from .models import LeaveRequest
 from .serializers import LeaveRequestSerializer
+from corevolthrm.models import LeaveApplication
+from django.contrib.auth import get_user_model
+from rest_framework.authentication import SessionAuthentication
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return
 
 
 # Create your views here.
@@ -161,12 +166,70 @@ class AnnouncementList(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     
 # GET all leave requests (admin)
-class LeaveRequestListAPIView(generics.ListAPIView):
-    queryset = LeaveRequest.objects.all()
+class LeaveRequestListAPIView(generics.ListCreateAPIView):
+    queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser] 
-class LeaveRequestUpdateAPIView(generics.UpdateAPIView):
-    queryset = LeaveRequest.objects.all()
-    serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    http_method_names = ['patch']
+    permission_classes = [IsAuthenticated]
+    print(queryset)
+    
+class UpdateLeaveStatusAPIView(APIView):
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            leave_request = LeaveApplication.objects.get(pk=pk)
+            new_status = request.data.get('status')
+            if new_status in ['Approved', 'Rejected']:
+                leave_request.status = new_status
+                leave_request.save()
+                return Response({'message': 'Status updated successfully'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        except LeaveRequest.DoesNotExist:
+            return Response({'error': 'Leave request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class LeaveApplicationListCreate(generics.ListCreateAPIView):
+    serializer_class = LeaveApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return LeaveApplication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class LeaveApplicationDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = LeaveApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return LeaveApplication.objects.filter(user=self.request.user)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_leave(request, pk):
+    try:
+        leave = LeaveApplication.objects.get(pk=pk, user=request.user)
+        leave.status = "Approved"
+        leave.save()
+        return Response({"message": "Leave approved"}, status=status.HTTP_200_OK)
+    except LeaveApplication.DoesNotExist:
+        return Response({"error": "Leave not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reject_leave(request, pk):
+    try:
+        leave = LeaveApplication.objects.get(pk=pk, user=request.user)
+        leave.status = "Rejected"
+        leave.save()
+        return Response({"message": "Leave rejected"}, status=status.HTTP_200_OK)
+    except LeaveApplication.DoesNotExist:
+        return Response({"error": "Leave not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def total_users_count(request):
+    User = get_user_model()
+    total_users = User.objects.count()
+    return Response({"total_users": total_users})
