@@ -8,13 +8,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer
-from django.contrib.auth import authenticate
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer
+from django.contrib.auth import authenticate,get_user_model
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee,WorkSession
+from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest
 from datetime import timedelta
 from django.utils import timezone
 from django.core import serializers
@@ -24,7 +24,11 @@ from django.core import serializers
 from .models import Profiles
 from .serializers import ProfilesSerializer
 
-
+from rest_framework.authentication import SessionAuthentication
+ 
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return
 # Create your views here.
 def profile_list(request):
     if request.method == 'GET':
@@ -287,3 +291,31 @@ def clock_out(request):
 
         session.save()
         return Response({'Message':"Successfully clocked out"},status=status.HTTP_200_OK)
+
+class LeaveRequestListAPIView(generics.ListCreateAPIView):
+    queryset = LeaveApplication.objects.all()
+    serializer_class = LeaveRequestSerializer
+    permission_classes = [IsAuthenticated]
+    print(queryset)
+   
+class UpdateLeaveStatusAPIView(APIView):
+    # authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [IsAuthenticated]
+ 
+    def patch(self, request, pk):
+        try:
+            leave_request = LeaveApplication.objects.get(pk=pk)
+            new_status = request.data.get('status')
+            if new_status in ['Approved', 'Rejected']:
+                leave_request.status = new_status
+                leave_request.save()
+                return Response({'message': 'Status updated successfully'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        except LeaveRequest.DoesNotExist:
+            return Response({'error': 'Leave request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def total_users_count(request):
+    User = get_user_model()
+    total_users = User.objects.count()
+    return Response({"total_users": total_users})
