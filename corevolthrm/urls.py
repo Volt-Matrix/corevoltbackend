@@ -25,7 +25,7 @@ urlpatterns = [
     path('link-employee/',views.AddEmployee),
     path('employee/clock-in/',views.clock_in),
     path('employee/checkIn-check/',views.check_clockIn),
-    path('employee/clock_out/',views.clock_out)
+    path('employee/clock_out/',views.clock_out),
     path('api/leave-requests/', LeaveRequestListAPIView.as_view(), name='leave-request-list'),
     path('api/leave-requests/<int:pk>/', UpdateLeaveStatusAPIView.as_view(), name='update-leave-status'),
     path('api/total-users/', total_users_count),
