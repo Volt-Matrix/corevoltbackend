@@ -29,6 +29,7 @@ urlpatterns = [
      path('api/leave-requests/', LeaveRequestListAPIView.as_view(), name='leave-request-list'),
     path('api/leave-requests/<int:pk>/', UpdateLeaveStatusAPIView.as_view(), name='update-leave-status'),
     path('api/total-users/', total_users_count),
+    path('my_sessions/',views.my_session)
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

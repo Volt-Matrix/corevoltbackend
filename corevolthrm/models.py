@@ -121,6 +121,20 @@ class TeamName(models.Model):
     name = models.CharField(max_length=50, unique=True)
     active = models.BooleanField(default=True)
     total_members = models.PositiveIntegerField(default=0)
+    manager = models.ForeignKey(
+        'Employee', 
+        on_delete=models.CASCADE, 
+        related_name='managed_teams',
+        help_text="Employee who manages this team", 
+        null=True,
+        blank=True 
+    )
+    members = models.ManyToManyField(
+        'Employee',
+        related_name='teams',
+        blank=True,
+        help_text="Team members"
+    )
     class Meta:
         ordering = ['name']
 
