@@ -153,7 +153,7 @@ def test_authenticated_view(request):
         "user_id": user.id,
         "email": user.email,
     })
-   
+@csrf_exempt   
 def logoutUser(request):
     response = JsonResponse({"message": "Logout successful",'isLogged':False})
     response.delete_cookie('access_token')
@@ -319,3 +319,9 @@ def total_users_count(request):
     User = get_user_model()
     total_users = User.objects.count()
     return Response({"total_users": total_users})
+
+@api_view(["GET"])
+def my_session(request):
+    WorkSessions = WorkSession.objects.filter(user=request.user)
+    sessions = WorkSessionSerializer(WorkSessions,many=True)
+    return Response({"sessions":sessions.data})
