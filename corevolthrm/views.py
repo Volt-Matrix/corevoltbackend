@@ -8,13 +8,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer
 from django.contrib.auth import authenticate,get_user_model
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest
+from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails
 from datetime import timedelta
 from django.utils import timezone
 from django.core import serializers
@@ -325,3 +325,40 @@ def my_session(request):
     WorkSessions = WorkSession.objects.filter(user=request.user)
     sessions = WorkSessionSerializer(WorkSessions,many=True)
     return Response({"sessions":sessions.data})
+
+@api_view(["POST"])
+def time_sheet_detail(request):
+   session = WorkSession.objects.all()
+   serializer = WorkSessionSerializer(session,many=True)
+   return Response(serializer.data)
+
+
+@api_view(["POST"])
+def daily_log(request):
+    if(request.data):
+        dataDict = request.data
+        from_date = dataDict['fromDate']
+        to_date = dataDict['toDate']
+        dailylog = WorkSession.objects.filter(user=request.user,clock_in__range=(from_date,to_date))
+        logs = WorkSessionSerializer(dailylog,many=True)
+        return Response({"dailyLog":logs.data})
+
+@api_view(["POST"])
+def add_time_expense(request):
+    session = request.data
+    if('task_id' in session):
+        return Response({"Message":"Daily Log Details recived"})
+    else:
+        print(session['session_id'])
+        sessionId = session['session_id']
+        description = session['description']
+        hourSpent = session['hourSpent']
+        mySession = WorkSession.objects.get(id=sessionId)
+        timeSheet = TimeSheetDetails.objects.create(session=mySession,hourSpent=hourSpent,description=description)
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        return Response({"Message":serializedTimeSheet.data})
+    
+    
+
+    return Response({"Message":"Daily Log Details recived"})
+

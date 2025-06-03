@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import CustomUser, LeaveApplication
-from corevolthrm.models import Role,EmployeeDesignation,TeamName,Employee,WorkSession,Break
+from corevolthrm.models import Role,EmployeeDesignation,TeamName,Employee,WorkSession,Break,LeaveRequest,TimeSheetDetails
 
 
 @admin.register(LeaveApplication)
@@ -24,3 +24,6 @@ admin.site.register(TeamName)
 admin.site.register(Employee)
 admin.site.register(WorkSession)
 admin.site.register(Break)
+admin.site.register(LeaveRequest)
+admin.site.register(TimeSheetDetails)
+
