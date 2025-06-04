@@ -5,7 +5,9 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.utils.dateparse import parse_date
 from django.utils import timezone
+from django.utils.timezone import localtime
 from datetime import datetime, time
+from datetime import time as dt_time
 from django.db.models import Q, Sum
 from corevolthrm.models import Employee, WorkSession, TeamName
 from attendance.serializers import DailyWorkSessionDetailSerializer, AttendanceOverviewRowSerializer, TeamNameSerializer
@@ -24,7 +26,7 @@ class AttendanceOverviewAPIView(APIView):
         if not target_date:
             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
-        team_id_param = request.query_params.get('department_id') # Frontend sends department_id
+        team_id_param = request.query_params.get('department_id')
         search_query = request.query_params.get('search')
 
         employees_queryset = Employee.objects.select_related('user', 'team').all()
@@ -40,16 +42,15 @@ class AttendanceOverviewAPIView(APIView):
                 Q(user__email__icontains=search_query)
             )
         
-        start_of_day = timezone.make_aware(datetime.combine(target_date, time.min), timezone.get_default_timezone())
-        end_of_day = timezone.make_aware(datetime.combine(target_date, time.max), timezone.get_default_timezone())
+        start_of_day = timezone.make_aware(datetime.combine(target_date, dt_time.min), timezone.get_default_timezone())
+        end_of_day = timezone.make_aware(datetime.combine(target_date, dt_time.max), timezone.get_default_timezone())
 
-        # This list will hold dictionaries, where 'sessions' will contain model instances (QuerySet)
-        overview_data_for_serializer = [] 
+        overview_data_for_serializer = []
+        first_check_in_times_seconds_list = [] # To store first check-in times in seconds from midnight
         
         for emp in employees_queryset:
-            # Fetch WorkSession model instances for this employee on the target date
             daily_sessions_queryset = WorkSession.objects.filter(
-                user=emp.user, # WorkSession.user is FK to CustomUser
+                user=emp.user,
                 clock_in__gte=start_of_day,
                 clock_in__lte=end_of_day 
             ).order_by('clock_in')
@@ -62,15 +63,18 @@ class AttendanceOverviewAPIView(APIView):
             if daily_sessions_queryset.exists():
                 status = "Present"
                 
-                # Calculate total daily work from the 'total_work_time' field of model instances
-                # This field is a DurationField and is typically set when a session is clocked out.
+                # Get first check-in time for average calculation
+                first_session_instance = daily_sessions_queryset.first()
+                if first_session_instance and first_session_instance.clock_in:
+                    # Convert to server's local time to get consistent time part
+                    local_first_check_in = localtime(first_session_instance.clock_in)
+                    time_part = local_first_check_in.time()
+                    seconds_from_midnight = time_part.hour * 3600 + time_part.minute * 60 + time_part.second
+                    first_check_in_times_seconds_list.append(seconds_from_midnight)
+
                 for session_instance in daily_sessions_queryset:
                     if session_instance.total_work_time:
                         total_daily_actual_work_seconds += int(session_instance.total_work_time.total_seconds())
-                    # If an active session's current duration should be added to the daily total:
-                    # elif session_instance.clock_in and session_instance.clock_out is None:
-                    #     total_daily_actual_work_seconds += int((timezone.now() - session_instance.clock_in).total_seconds())
-
 
                 last_model_session = daily_sessions_queryset.last()
                 if last_model_session:
@@ -85,14 +89,34 @@ class AttendanceOverviewAPIView(APIView):
                 'most_recent_clock_out': most_recent_co,
                 'total_daily_worked_seconds': total_daily_actual_work_seconds,
                 'status': status,
-                'sessions': daily_sessions_queryset, 
+                'sessions': daily_sessions_queryset,
             })
 
-        # AttendanceOverviewRowSerializer will now receive the 'sessions' field 
-        # as a QuerySet. Its nested DailyWorkSessionDetailSerializer(many=True)
-        # will then correctly iterate over these WorkSession model instances.
-        serializer = AttendanceOverviewRowSerializer(instance=overview_data_for_serializer, many=True)
-        return Response(serializer.data)
+        # Calculate average check-in time
+        average_check_in_time_str = None
+        if first_check_in_times_seconds_list:
+            avg_seconds = sum(first_check_in_times_seconds_list) / len(first_check_in_times_seconds_list)
+            avg_hour = int(avg_seconds // 3600)
+            avg_minute = int((avg_seconds % 3600) // 60)
+            
+            # Format as HH:MM AM/PM (example formatting)
+            avg_time_obj = dt_time(hour=avg_hour, minute=avg_minute)
+            average_check_in_time_str = avg_time_obj.strftime("%I:%M %p")
+
+
+        employee_attendance_list = AttendanceOverviewRowSerializer(instance=overview_data_for_serializer, many=True).data
+        
+        # Structure the final response
+        final_response_data = {
+            "summary_stats": {
+                "average_check_in_time": average_check_in_time_str,
+                "total_present": sum(1 for e in employee_attendance_list if e['status'] == 'Present'),
+                "total_absent": sum(1 for e in employee_attendance_list if e['status'] == 'Absent'),
+            },
+            "employee_attendance_list": employee_attendance_list
+        }
+        
+        return Response(final_response_data)
 
 # API View for listing Teams (Departments)
 class TeamListView(generics.ListAPIView):
