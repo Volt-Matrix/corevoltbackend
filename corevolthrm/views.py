@@ -297,9 +297,12 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated]
     print(queryset)
+    
+    
+    
    
 class UpdateLeaveStatusAPIView(APIView):
-    # authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):

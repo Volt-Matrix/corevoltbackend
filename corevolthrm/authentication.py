@@ -31,10 +31,10 @@ class CookieJWTAuthentication(JWTAuthentication):
         Enforce CSRF validation for cookie-based authentication.
         Only needed for browser-based clients.
         """
-        check = CSRFCheck(request)
+        check = CSRFCheck(request._request)
         # The check is successfully performed when the method returns None
-        check.process_request(request)
-        reason = check.process_view(request, None, (), {})
+        check.process_request(request._request)
+        reason = check.process_view(request._request, None, (), {})
         if reason:
             # CSRF failed, bail with explicit error message
             raise exceptions.PermissionDenied('CSRF Failed: %s' % reason)
