@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'corevolthrm',
     'home',
+    'attendance',
 ]
 
 MIDDLEWARE = [

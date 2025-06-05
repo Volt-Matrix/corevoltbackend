@@ -8,13 +8,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer
 from django.contrib.auth import authenticate,get_user_model
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest
+from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails
 from datetime import timedelta
 from django.utils import timezone
 from django.core import serializers
@@ -120,6 +120,7 @@ def loginUser(request):
 def get_csrf_token(request):
     csrf_token = get_token(request)
     return JsonResponse({"csrftoken": csrf_token})
+
 @api_view(["POST"])
 def refresh_view(request):
     refresh_token = request.COOKIES.get("refresh_token")
@@ -328,3 +329,65 @@ def my_session(request):
     WorkSessions = WorkSession.objects.filter(user=request.user)
     sessions = WorkSessionSerializer(WorkSessions,many=True)
     return Response({"sessions":sessions.data})
+
+@api_view(["POST"])
+def time_sheet_detail(request):
+   session = WorkSession.objects.all()
+   serializer = WorkSessionSerializer(session,many=True)
+   return Response(serializer.data)
+
+
+@api_view(["POST","GET",'DELETE'])
+@permission_classes([IsAuthenticated])
+def daily_log(request):
+    if(request.data and request.method=='POST'):
+        dataDict = request.data
+        from_date = dataDict['fromDate']
+        to_date = dataDict['toDate']
+        dailylog = WorkSession.objects.filter(user=request.user,clock_in__range=(from_date,to_date))
+        logs = WorkSessionSerializer(dailylog,many=True)
+        return Response({"dailyLog":logs.data})
+    if request.method =='GET':
+        dailylog = WorkSession.objects.filter(user=request.user)
+        logs = WorkSessionSerializer(dailylog,many=True)
+        return Response({"dailyLog":logs.data})
+    return Response({"daily_log":"Expense Deleted"})
+
+@api_view(['DELETE','PUT'])
+@permission_classes([IsAuthenticated])
+def delete_expense_daily_log(request,session_id,expense_id):
+    if request.method =='DELETE':
+        dailylog = TimeSheetDetails.objects.filter(id=expense_id).delete()
+        print(dailylog)
+        return Response({"daily_log":"Expense Deleted"},status=status.HTTP_200_OK)
+    elif request.method =='PUT':
+        expId = request.data.get('id')
+        timeSheet = TimeSheetDetails.objects.get(id=expId)
+        timeSheet.hourSpent = request.data.get('hourSpent')
+        timeSheet.description = request.data.get('description')
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        timeSheet.save()
+        print(serializedTimeSheet.data)
+        return Response(serializedTimeSheet.data,status=status.HTTP_200_OK)
+
+    else :
+        return Response({"Error":"Unable to delete slot"},status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(["POST"])
+def add_time_expense(request):
+    try:
+        session = request.data
+        print(session['session_id'])
+        sessionId = session['session_id']
+        description = session['description']
+        hourSpent = session['hourSpent']
+        mySession = WorkSession.objects.get(id=sessionId)
+        timeSheet = TimeSheetDetails.objects.create(session=mySession,hourSpent=hourSpent,description=description)
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        return Response(serializedTimeSheet.data)
+    except:
+         return Response({"error":'Unable to add details to daily log'},status=status.HTTP_400_BAD_REQUEST)
+    
+
+
