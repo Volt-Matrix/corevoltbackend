@@ -120,6 +120,7 @@ def loginUser(request):
 def get_csrf_token(request):
     csrf_token = get_token(request)
     return JsonResponse({"csrftoken": csrf_token})
+
 @api_view(["POST"])
 def refresh_view(request):
     refresh_token = request.COOKIES.get("refresh_token")
@@ -299,7 +300,7 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     print(queryset)
    
 class UpdateLeaveStatusAPIView(APIView):
-    # authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):
@@ -333,22 +334,47 @@ def time_sheet_detail(request):
    return Response(serializer.data)
 
 
-@api_view(["POST"])
+@api_view(["POST","GET",'DELETE'])
+@permission_classes([IsAuthenticated])
 def daily_log(request):
-    if(request.data):
+    if(request.data and request.method=='POST'):
         dataDict = request.data
         from_date = dataDict['fromDate']
         to_date = dataDict['toDate']
         dailylog = WorkSession.objects.filter(user=request.user,clock_in__range=(from_date,to_date))
         logs = WorkSessionSerializer(dailylog,many=True)
         return Response({"dailyLog":logs.data})
+    if request.method =='GET':
+        dailylog = WorkSession.objects.filter(user=request.user)
+        logs = WorkSessionSerializer(dailylog,many=True)
+        return Response({"dailyLog":logs.data})
+    return Response({"daily_log":"Expense Deleted"})
+
+@api_view(['DELETE','PUT'])
+@permission_classes([IsAuthenticated])
+def delete_expense_daily_log(request,session_id,expense_id):
+    if request.method =='DELETE':
+        dailylog = TimeSheetDetails.objects.filter(id=expense_id).delete()
+        print(dailylog)
+        return Response({"daily_log":"Expense Deleted"},status=status.HTTP_200_OK)
+    elif request.method =='PUT':
+        expId = request.data.get('id')
+        timeSheet = TimeSheetDetails.objects.get(id=expId)
+        timeSheet.hourSpent = request.data.get('hourSpent')
+        timeSheet.description = request.data.get('description')
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        timeSheet.save()
+        print(serializedTimeSheet.data)
+        return Response(serializedTimeSheet.data,status=status.HTTP_200_OK)
+
+    else :
+        return Response({"Error":"Unable to delete slot"},status=status.HTTP_400_BAD_REQUEST)
+    
 
 @api_view(["POST"])
 def add_time_expense(request):
-    session = request.data
-    if('task_id' in session):
-        return Response({"Message":"Daily Log Details recived"})
-    else:
+    try:
+        session = request.data
         print(session['session_id'])
         sessionId = session['session_id']
         description = session['description']
@@ -356,9 +382,9 @@ def add_time_expense(request):
         mySession = WorkSession.objects.get(id=sessionId)
         timeSheet = TimeSheetDetails.objects.create(session=mySession,hourSpent=hourSpent,description=description)
         serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
-        return Response({"Message":serializedTimeSheet.data})
-    
+        return Response(serializedTimeSheet.data)
+    except:
+         return Response({"error":'Unable to add details to daily log'},status=status.HTTP_400_BAD_REQUEST)
     
 
-    return Response({"Message":"Daily Log Details recived"})
 
