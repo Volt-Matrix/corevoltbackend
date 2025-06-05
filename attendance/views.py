@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from django.utils.dateparse import parse_date
 from django.utils import timezone
-from django.utils.timezone import localtime
 from datetime import datetime, time
 from datetime import time as dt_time
 from django.db.models import Q, Sum
@@ -48,49 +47,59 @@ class AttendanceOverviewAPIView(APIView):
         overview_data_for_serializer = []
         first_check_in_times_seconds_list = [] # To store first check-in times in seconds from midnight
         
-        for emp in employees_queryset:
-            daily_sessions_queryset = WorkSession.objects.filter(
-                user=emp.user,
-                clock_in__gte=start_of_day,
-                clock_in__lte=end_of_day 
-            ).order_by('clock_in')
+        # get the original timezone to restore it later
+        original_current_timezone_obj = timezone.get_current_timezone()
+        ist_timezone_str = 'Asia/Kolkata'
 
-            total_daily_actual_work_seconds = 0
-            most_recent_ci = None
-            most_recent_co = None
-            status = "Absent"
+        try:
+            timezone.activate(ist_timezone_str)
 
-            if daily_sessions_queryset.exists():
-                status = "Present"
+            for emp in employees_queryset:
+                daily_sessions_queryset = WorkSession.objects.filter(
+                    user=emp.user,
+                    clock_in__gte=start_of_day,
+                    clock_in__lte=end_of_day 
+                ).order_by('clock_in')
+
+                total_daily_actual_work_seconds = 0
+                most_recent_ci = None
+                most_recent_co = None
+                status = "Absent"
+
+                if daily_sessions_queryset.exists():
+                    status = "Present"
+                    
+                    # Get first check-in time for average calculation
+                    first_session_instance = daily_sessions_queryset.first()
+                    if first_session_instance and first_session_instance.clock_in:
+                        # Convert to server's local time to get consistent time part
+                        local_first_check_in = timezone.localtime(first_session_instance.clock_in)
+                        time_part = local_first_check_in.time()
+                        seconds_from_midnight = time_part.hour * 3600 + time_part.minute * 60 + time_part.second
+                        first_check_in_times_seconds_list.append(seconds_from_midnight)
+
+                    for session_instance in daily_sessions_queryset:
+                        if session_instance.total_work_time:
+                            total_daily_actual_work_seconds += int(session_instance.total_work_time.total_seconds())
+
+                    last_model_session = daily_sessions_queryset.last()
+                    if last_model_session:
+                        most_recent_ci = last_model_session.clock_in
+                        most_recent_co = last_model_session.clock_out
                 
-                # Get first check-in time for average calculation
-                first_session_instance = daily_sessions_queryset.first()
-                if first_session_instance and first_session_instance.clock_in:
-                    # Convert to server's local time to get consistent time part
-                    local_first_check_in = localtime(first_session_instance.clock_in)
-                    time_part = local_first_check_in.time()
-                    seconds_from_midnight = time_part.hour * 3600 + time_part.minute * 60 + time_part.second
-                    first_check_in_times_seconds_list.append(seconds_from_midnight)
-
-                for session_instance in daily_sessions_queryset:
-                    if session_instance.total_work_time:
-                        total_daily_actual_work_seconds += int(session_instance.total_work_time.total_seconds())
-
-                last_model_session = daily_sessions_queryset.last()
-                if last_model_session:
-                    most_recent_ci = last_model_session.clock_in
-                    most_recent_co = last_model_session.clock_out
-            
-            overview_data_for_serializer.append({
-                'employee_id': emp.employee_id,
-                'name': f"{emp.user.first_name} {emp.user.last_name}",
-                'department_name': emp.team.name if emp.team else None,
-                'most_recent_clock_in': most_recent_ci,
-                'most_recent_clock_out': most_recent_co,
-                'total_daily_worked_seconds': total_daily_actual_work_seconds,
-                'status': status,
-                'sessions': daily_sessions_queryset,
-            })
+                overview_data_for_serializer.append({
+                    'employee_id': emp.employee_id,
+                    'name': f"{emp.user.first_name} {emp.user.last_name}",
+                    'department_name': emp.team.name if emp.team else None,
+                    'most_recent_clock_in': most_recent_ci,
+                    'most_recent_clock_out': most_recent_co,
+                    'total_daily_worked_seconds': total_daily_actual_work_seconds,
+                    'status': status,
+                    'sessions': daily_sessions_queryset,
+                })
+        finally:
+            # restore original timezone object
+            timezone.activate(original_current_timezone_obj)
 
         # Calculate average check-in time
         average_check_in_time_str = None
