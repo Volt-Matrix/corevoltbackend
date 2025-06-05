@@ -296,7 +296,6 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated]
-    print(queryset)
    
 class UpdateLeaveStatusAPIView(APIView):
     # authentication_classes = [CsrfExemptSessionAuthentication]
