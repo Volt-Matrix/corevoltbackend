@@ -350,15 +350,26 @@ def daily_log(request):
         return Response({"dailyLog":logs.data})
     return Response({"daily_log":"Expense Deleted"})
 
-@api_view(['DELETE'])
+@api_view(['DELETE','PUT'])
 @permission_classes([IsAuthenticated])
 def delete_expense_daily_log(request,session_id,expense_id):
     if request.method =='DELETE':
         dailylog = TimeSheetDetails.objects.filter(id=expense_id).delete()
         print(dailylog)
         return Response({"daily_log":"Expense Deleted"},status=status.HTTP_200_OK)
-    else:
+    elif request.method =='PUT':
+        expId = request.data.get('id')
+        timeSheet = TimeSheetDetails.objects.get(id=expId)
+        timeSheet.hourSpent = request.data.get('hourSpent')
+        timeSheet.description = request.data.get('description')
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        timeSheet.save()
+        print(serializedTimeSheet.data)
+        return Response(serializedTimeSheet.data,status=status.HTTP_200_OK)
+
+    else :
         return Response({"Error":"Unable to delete slot"},status=status.HTTP_400_BAD_REQUEST)
+    
 
 @api_view(["POST"])
 def add_time_expense(request):
