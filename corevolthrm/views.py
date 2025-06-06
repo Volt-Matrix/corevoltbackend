@@ -18,9 +18,6 @@ from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplic
 from datetime import timedelta
 from django.utils import timezone
 from django.core import serializers
-
-
-
 from .models import Profiles
 from .serializers import ProfilesSerializer
 
@@ -297,13 +294,8 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated]
-    print(queryset)
-    
-    
-    
    
 class UpdateLeaveStatusAPIView(APIView):
-    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):
