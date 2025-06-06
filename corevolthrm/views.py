@@ -338,20 +338,15 @@ def get_team_hierarchy(request):
                 for sub in emp.subordinates.all()
             ]
         }
+
+   
+    top_level_employees = Employee.objects.filter(reports_to__isnull=True)
+
     ceo_node = {
         "name": "Vivek",
         "title": "Chief Executive Officer",
         "gender": "Male",
-        "children": []
+        "children": [build_hierarchy(emp) for emp in top_level_employees]
     }
-
-    all_employees = Employee.objects.exclude(reports_to=None)
-    emp_map = {emp.id: emp for emp in all_employees}
-    attached_ids = set()
-    for emp in all_employees:
-        if emp.reports_to and emp.reports_to.id in emp_map:
-            attached_ids.add(emp.id)
-    top_level = [emp for emp in all_employees if emp.reports_to and emp.reports_to.reports_to is None]
-    ceo_node["children"] = [build_hierarchy(emp) for emp in top_level]
 
     return Response(ceo_node)
