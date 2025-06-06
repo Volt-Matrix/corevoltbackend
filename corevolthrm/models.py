@@ -240,7 +240,7 @@ class WorkSession(models.Model):
     clock_out = models.DateTimeField(null=True, blank=True)
     total_work_time = models.DurationField(null=True, blank=True)  # New field
     approval_status=  models.CharField(max_length=20, choices=LEAVE_STATUS_CHOICES, default='Pending')
-
+    next_clock_in = models.DateTimeField(null=True,blank=True)
 
     def is_active(self):
         return self.clock_out is None

@@ -63,7 +63,7 @@ class WorkSessionSerializer(serializers.ModelSerializer):
     timesheet_details = TimeSheetDetailsSerializer(many=True, read_only=True)
     class Meta:
         model = WorkSession
-        fields = ['id','clock_in', 'clock_out', 'total_work_time','approval_status','timesheet_details']
+        fields = ['id','clock_in', 'clock_out','next_clock_in', 'total_work_time','approval_status','timesheet_details',]
 class LeaveRequestSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
  

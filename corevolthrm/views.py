@@ -15,7 +15,7 @@ from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails
-from datetime import timedelta
+from datetime import datetime, time,timedelta
 from django.utils import timezone
 from django.core import serializers
 from .models import Profiles
@@ -266,6 +266,15 @@ def check_clockIn(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def clock_in(request):
+    if WorkSession.objects.filter(user=request.user, clock_in__date=timezone.localdate(),clock_out__date = timezone.localdate()).exists():
+        currentlog = WorkSession.objects.get(user=request.user,clock_in__date=timezone.localdate(),clock_out__date = timezone.localdate())
+        if(currentlog):
+            currentlog.clock_out = None
+            currentlog.next_clock_in = timezone.now()
+            currentlog.save()
+            workSession = WorkSessionSerializer(currentlog)
+            print(workSession.data)
+            return Response({'clock_in':True,'session':[workSession.data]},status=status.HTTP_200_OK)
     if not WorkSession.objects.filter(user=request.user, clock_out__isnull=True).exists():
        workSession =  WorkSession.objects.create(user=request.user, clock_in=timezone.now())
        session = WorkSessionSerializer(workSession)
@@ -279,14 +288,30 @@ def clock_in(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])   
 def clock_out(request):
+    def safe_parse_duration(duration_str):
+        try:
+            parts = duration_str.split(':')
+            if len(parts) != 3:
+                raise ValueError("Duration must be in HH:MM:SS format")
+        
+            hours, minutes, seconds = map(int, parts)
+        
+        # Validate ranges
+            if not (0 <= minutes < 60) or not (0 <= seconds < 60):
+                raise ValueError("Minutes and seconds must be 0-59")
+            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        except Exception as e:
+            print(f"Error parsing duration '{duration_str}': {e}")
+            return timedelta(0)
     session = WorkSession.objects.filter(user=request.user, clock_out__isnull=True).first()
+    session.clock_out = timezone.now()
     if session:
-        session.clock_out = timezone.now()
-        # Calculate total work time excluding breaks
-        total_time = session.clock_out - session.clock_in
-        total_breaks = session.total_break_time()
-        session.total_work_time = total_time - total_breaks
-
+        if session.next_clock_in:
+            total_time = session.clock_out - session.next_clock_in + (safe_parse_duration(session.total_work_time) if session.total_work_time else safe_parse_duration('00:00:00'))
+            session.total_work_time = total_time 
+        else:
+            total_time = session.clock_out - session.clock_in + (safe_parse_duration(session.total_work_time) if session.total_work_time else safe_parse_duration('00:00:00'))
+            session.total_work_time = total_time
         session.save()
         return Response({'Message':"Successfully clocked out"},status=status.HTTP_200_OK)
 
@@ -336,7 +361,7 @@ def daily_log(request):
         dataDict = request.data
         from_date = dataDict['fromDate']
         to_date = dataDict['toDate']
-        dailylog = WorkSession.objects.filter(user=request.user,clock_in__range=(from_date,to_date))
+        dailylog = WorkSession.objects.filter(user=request.user,clock_in__date__gte=from_date,clock_in__date__lte=to_date)
         logs = WorkSessionSerializer(dailylog,many=True)
         return Response({"dailyLog":logs.data})
     if request.method =='GET':
