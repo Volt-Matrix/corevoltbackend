@@ -296,7 +296,6 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
    
 class UpdateLeaveStatusAPIView(APIView):
-    authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):
