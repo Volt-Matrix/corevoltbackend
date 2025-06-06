@@ -175,6 +175,15 @@ class Employee(models.Model):
         on_delete=models.PROTECT,
         related_name='employees'
     )
+
+    reports_to = models.ForeignKey(
+    'self',
+    null=True,
+    blank=True,
+    on_delete=models.SET_NULL,
+    related_name='subordinates'
+)
+
     
     team = models.ForeignKey(
         'TeamName',

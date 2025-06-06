@@ -18,6 +18,7 @@ from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplic
 from datetime import timedelta
 from django.utils import timezone
 from django.core import serializers
+from .models import Employee
 
 
 
@@ -296,7 +297,6 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
     permission_classes = [IsAuthenticated]
-    print(queryset)
    
 class UpdateLeaveStatusAPIView(APIView):
     # authentication_classes = [CsrfExemptSessionAuthentication]
@@ -325,3 +325,33 @@ def my_session(request):
     WorkSessions = WorkSession.objects.filter(user=request.user)
     sessions = WorkSessionSerializer(WorkSessions,many=True)
     return Response({"sessions":sessions.data})
+
+@api_view(['GET'])
+def get_team_hierarchy(request):
+    def build_hierarchy(emp):
+        return {
+            "name": f"{emp.user.first_name} {emp.user.last_name}",
+            "title": emp.designation.designationName,
+            "gender": "Female" if emp.gender == "F" else "Male",
+            "children": [
+                build_hierarchy(sub)
+                for sub in emp.subordinates.all()
+            ]
+        }
+    ceo_node = {
+        "name": "Vivek",
+        "title": "Chief Executive Officer",
+        "gender": "Male",
+        "children": []
+    }
+
+    all_employees = Employee.objects.exclude(reports_to=None)
+    emp_map = {emp.id: emp for emp in all_employees}
+    attached_ids = set()
+    for emp in all_employees:
+        if emp.reports_to and emp.reports_to.id in emp_map:
+            attached_ids.add(emp.id)
+    top_level = [emp for emp in all_employees if emp.reports_to and emp.reports_to.reports_to is None]
+    ceo_node["children"] = [build_hierarchy(emp) for emp in top_level]
+
+    return Response(ceo_node)

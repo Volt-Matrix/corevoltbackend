@@ -7,6 +7,7 @@ from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveReque
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import approve_leave, reject_leave,total_users_count
+from .views import get_team_hierarchy
 
 urlpatterns = [
     path('profile/', views.profile_list),
@@ -29,7 +30,8 @@ urlpatterns = [
      path('api/leave-requests/', LeaveRequestListAPIView.as_view(), name='leave-request-list'),
     path('api/leave-requests/<int:pk>/', UpdateLeaveStatusAPIView.as_view(), name='update-leave-status'),
     path('api/total-users/', total_users_count),
-    path('my_sessions/',views.my_session)
+    path('my_sessions/',views.my_session),
+    path("api/team-hierarchy/", get_team_hierarchy, name="team-hierarchy"),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
