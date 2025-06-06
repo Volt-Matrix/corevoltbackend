@@ -46,7 +46,7 @@ CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'corevolthrm.CustomUser'
 # Session and jwt settings
 CSRF_COOKIE_SECURE = False  # True in production
-CSRF_COOKIE_HTTPONLY = False  # Required for React to read the CSRF token
+CSRF_COOKIE_HTTPONLY = True  # Required for React to read the CSRF token
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = False  # True in production
 SESSION_COOKIE_HTTPONLY = True
@@ -155,11 +155,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'corevolthrm.authentication.CookieJWTAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    )
 }
 
 
