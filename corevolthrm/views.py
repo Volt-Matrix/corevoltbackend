@@ -8,21 +8,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer
 from django.contrib.auth import authenticate,get_user_model
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest
-from datetime import timedelta
+from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails
+from datetime import datetime, time,timedelta
 from django.utils import timezone
 from django.core import serializers
-from .models import Employee
-
-
-
-from .models import Profiles
+from .models import Employee, Profiles
 from .serializers import ProfilesSerializer
 
 from rest_framework.authentication import SessionAuthentication
@@ -121,6 +117,7 @@ def loginUser(request):
 def get_csrf_token(request):
     csrf_token = get_token(request)
     return JsonResponse({"csrftoken": csrf_token})
+
 @api_view(["POST"])
 def refresh_view(request):
     refresh_token = request.COOKIES.get("refresh_token")
@@ -269,6 +266,15 @@ def check_clockIn(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def clock_in(request):
+    if WorkSession.objects.filter(user=request.user, clock_in__date=timezone.localdate(),clock_out__date = timezone.localdate()).exists():
+        currentlog = WorkSession.objects.get(user=request.user,clock_in__date=timezone.localdate(),clock_out__date = timezone.localdate())
+        if(currentlog):
+            currentlog.clock_out = None
+            currentlog.next_clock_in = timezone.now()
+            currentlog.save()
+            workSession = WorkSessionSerializer(currentlog)
+            print(workSession.data)
+            return Response({'clock_in':True,'session':[workSession.data]},status=status.HTTP_200_OK)
     if not WorkSession.objects.filter(user=request.user, clock_out__isnull=True).exists():
        workSession =  WorkSession.objects.create(user=request.user, clock_in=timezone.now())
        session = WorkSessionSerializer(workSession)
@@ -282,14 +288,42 @@ def clock_in(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])   
 def clock_out(request):
+    def parse_duration(duration):
+    
+        if isinstance(duration, timedelta):
+        # Already a timedelta object
+            return duration
+        elif isinstance(duration, str):
+        # Parse string format
+            try:
+            # Handle format like "0:00:02.875683"
+                if '.' in duration:
+                    time_part, microsec_part = duration.split('.')
+                    hours, minutes, seconds = map(int, time_part.split(':'))
+                    microseconds = int(microsec_part.ljust(6, '0')[:6])  # Pad or truncate to 6 digits
+                    return timedelta(hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+                else:
+                    # Handle format like "0:00:02"
+                    hours, minutes, seconds = map(int, duration.split(':'))
+                    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            except Exception as e:
+                print(f"Error parsing duration '{duration}': {e}")
+                return timedelta(0)
+        else:
+            print(f"Unsupported duration type: {type(duration)}")
+            return timedelta(0)
+           
     session = WorkSession.objects.filter(user=request.user, clock_out__isnull=True).first()
+    session.clock_out = timezone.now()
     if session:
-        session.clock_out = timezone.now()
-        # Calculate total work time excluding breaks
-        total_time = session.clock_out - session.clock_in
-        total_breaks = session.total_break_time()
-        session.total_work_time = total_time - total_breaks
-
+        if session.next_clock_in:
+            total_time = session.clock_out - session.next_clock_in + (parse_duration(session.total_work_time) if session.total_work_time else parse_duration('00:00:00'))
+            session.total_work_time = total_time 
+            print('next clock in ')
+        else:
+            total_time = session.clock_out - session.clock_in + (parse_duration(session.total_work_time) if session.total_work_time else parse_duration('00:00:00'))
+            session.total_work_time = total_time
+            print('clock out')
         session.save()
         return Response({'Message':"Successfully clocked out"},status=status.HTTP_200_OK)
 
@@ -299,7 +333,6 @@ class LeaveRequestListAPIView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
    
 class UpdateLeaveStatusAPIView(APIView):
-    # authentication_classes = [CsrfExemptSessionAuthentication]
     permission_classes = [IsAuthenticated]
  
     def patch(self, request, pk):
@@ -350,3 +383,64 @@ def get_team_hierarchy(request):
     }
 
     return Response(ceo_node)
+@api_view(["POST"])
+def time_sheet_detail(request):
+   session = WorkSession.objects.all()
+   serializer = WorkSessionSerializer(session,many=True)
+   return Response(serializer.data)
+
+
+@api_view(["POST","GET",'DELETE'])
+@permission_classes([IsAuthenticated])
+def daily_log(request):
+    if(request.data and request.method=='POST'):
+        dataDict = request.data
+        from_date = dataDict['fromDate']
+        to_date = dataDict['toDate']
+        dailylog = WorkSession.objects.filter(user=request.user,clock_in__date__gte=from_date,clock_in__date__lte=to_date)
+        logs = WorkSessionSerializer(dailylog,many=True)
+        return Response({"dailyLog":logs.data})
+    if request.method =='GET':
+        dailylog = WorkSession.objects.filter(user=request.user)
+        logs = WorkSessionSerializer(dailylog,many=True)
+        return Response({"dailyLog":logs.data})
+    return Response({"daily_log":"Expense Deleted"})
+
+@api_view(['DELETE','PUT'])
+@permission_classes([IsAuthenticated])
+def delete_expense_daily_log(request,session_id,expense_id):
+    if request.method =='DELETE':
+        dailylog = TimeSheetDetails.objects.filter(id=expense_id).delete()
+        print(dailylog)
+        return Response({"daily_log":"Expense Deleted"},status=status.HTTP_200_OK)
+    elif request.method =='PUT':
+        expId = request.data.get('id')
+        timeSheet = TimeSheetDetails.objects.get(id=expId)
+        timeSheet.hourSpent = request.data.get('hourSpent')
+        timeSheet.description = request.data.get('description')
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        timeSheet.save()
+        print(serializedTimeSheet.data)
+        return Response(serializedTimeSheet.data,status=status.HTTP_200_OK)
+
+    else :
+        return Response({"Error":"Unable to delete slot"},status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(["POST"])
+def add_time_expense(request):
+    try:
+        session = request.data
+        print(session['session_id'])
+        sessionId = session['session_id']
+        description = session['description']
+        hourSpent = session['hourSpent']
+        mySession = WorkSession.objects.get(id=sessionId)
+        timeSheet = TimeSheetDetails.objects.create(session=mySession,hourSpent=hourSpent,description=description)
+        serializedTimeSheet = TimeSheetDetailsSerializer(timeSheet)
+        return Response(serializedTimeSheet.data)
+    except:
+         return Response({"error":'Unable to add details to daily log'},status=status.HTTP_400_BAD_REQUEST)
+    
+
+

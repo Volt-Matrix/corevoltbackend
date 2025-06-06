@@ -32,6 +32,10 @@ urlpatterns = [
     path('api/total-users/', total_users_count),
     path('my_sessions/',views.my_session),
     path("api/team-hierarchy/", get_team_hierarchy, name="team-hierarchy"),
+    path('time-sheet-details/',views.time_sheet_detail),
+    path('daily-log/',views.daily_log),
+    path('daily-log-delete-expense/<int:session_id>/<int:expense_id>/',views.delete_expense_daily_log),
+    path('attendance-add-time-expense/',views.add_time_expense)
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

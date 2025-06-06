@@ -239,10 +239,17 @@ class Employee(models.Model):
         """Return the full name from the related user"""
         return self.employment_status
 class WorkSession(models.Model):
+    LEAVE_STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     clock_in = models.DateTimeField()
     clock_out = models.DateTimeField(null=True, blank=True)
     total_work_time = models.DurationField(null=True, blank=True)  # New field
+    approval_status=  models.CharField(max_length=20, choices=LEAVE_STATUS_CHOICES, default='Pending')
+    next_clock_in = models.DateTimeField(null=True,blank=True)
 
     def is_active(self):
         return self.clock_out is None
@@ -282,3 +289,11 @@ class LeaveRequest(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.leaveType} ({self.status})"
+    
+
+class TimeSheetDetails(models.Model):
+    session = models.ForeignKey(WorkSession,on_delete=models.CASCADE,related_name='timesheet_details',null=True)
+    hourSpent = models.IntegerField()
+    description = models.CharField() 
+    def __str__(self):
+        return self.description

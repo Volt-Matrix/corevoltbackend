@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from corevolthrm.models import Profiles, LeaveApplication, Employee, WorkSession
+from corevolthrm.models import Profiles, LeaveApplication, Employee, WorkSession,TimeSheetDetails
 
 User = get_user_model()
 
@@ -54,11 +54,16 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['role', 'designation', 'team']
+
+class TimeSheetDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TimeSheetDetails
+        fields = ['id', 'hourSpent', 'description']
 class WorkSessionSerializer(serializers.ModelSerializer):
-    #  user = (read_only=True)
-     class Meta:
+    timesheet_details = TimeSheetDetailsSerializer(many=True, read_only=True)
+    class Meta:
         model = WorkSession
-        fields = ['clock_in', 'clock_out', 'total_work_time']
+        fields = ['id','clock_in', 'clock_out','next_clock_in', 'total_work_time','approval_status','timesheet_details',]
 class LeaveRequestSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
  
