@@ -291,30 +291,42 @@ def clock_in(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])   
 def clock_out(request):
-    def safe_parse_duration(duration_str):
-        try:
-            parts = duration_str.split(':')
-            if len(parts) != 3:
-                raise ValueError("Duration must be in HH:MM:SS format")
-        
-            hours, minutes, seconds = map(int, parts)
-        
-        # Validate ranges
-            if not (0 <= minutes < 60) or not (0 <= seconds < 60):
-                raise ValueError("Minutes and seconds must be 0-59")
-            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
-        except Exception as e:
-            print(f"Error parsing duration '{duration_str}': {e}")
+    def parse_duration(duration):
+    
+        if isinstance(duration, timedelta):
+        # Already a timedelta object
+            return duration
+        elif isinstance(duration, str):
+        # Parse string format
+            try:
+            # Handle format like "0:00:02.875683"
+                if '.' in duration:
+                    time_part, microsec_part = duration.split('.')
+                    hours, minutes, seconds = map(int, time_part.split(':'))
+                    microseconds = int(microsec_part.ljust(6, '0')[:6])  # Pad or truncate to 6 digits
+                    return timedelta(hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+                else:
+                    # Handle format like "0:00:02"
+                    hours, minutes, seconds = map(int, duration.split(':'))
+                    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            except Exception as e:
+                print(f"Error parsing duration '{duration}': {e}")
+                return timedelta(0)
+        else:
+            print(f"Unsupported duration type: {type(duration)}")
             return timedelta(0)
+           
     session = WorkSession.objects.filter(user=request.user, clock_out__isnull=True).first()
     session.clock_out = timezone.now()
     if session:
         if session.next_clock_in:
-            total_time = session.clock_out - session.next_clock_in + (safe_parse_duration(session.total_work_time) if session.total_work_time else safe_parse_duration('00:00:00'))
+            total_time = session.clock_out - session.next_clock_in + (parse_duration(session.total_work_time) if session.total_work_time else parse_duration('00:00:00'))
             session.total_work_time = total_time 
+            print('next clock in ')
         else:
-            total_time = session.clock_out - session.clock_in + (safe_parse_duration(session.total_work_time) if session.total_work_time else safe_parse_duration('00:00:00'))
+            total_time = session.clock_out - session.clock_in + (parse_duration(session.total_work_time) if session.total_work_time else parse_duration('00:00:00'))
             session.total_work_time = total_time
+            print('clock out')
         session.save()
         return Response({'Message':"Successfully clocked out"},status=status.HTTP_200_OK)
 
