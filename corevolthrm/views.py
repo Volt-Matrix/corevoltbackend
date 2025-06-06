@@ -18,7 +18,7 @@ from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplic
 from datetime import datetime, time,timedelta
 from django.utils import timezone
 from django.core import serializers
-from .models import Profiles
+from .models import Employee, Profiles
 from .serializers import ProfilesSerializer
 
 from rest_framework.authentication import SessionAuthentication
@@ -359,6 +359,30 @@ def my_session(request):
     sessions = WorkSessionSerializer(WorkSessions,many=True)
     return Response({"sessions":sessions.data})
 
+@api_view(['GET'])
+def get_team_hierarchy(request):
+    def build_hierarchy(emp):
+        return {
+            "name": f"{emp.user.first_name} {emp.user.last_name}",
+            "title": emp.designation.designationName,
+            "gender": "Female" if emp.gender == "F" else "Male",
+            "children": [
+                build_hierarchy(sub)
+                for sub in emp.subordinates.all()
+            ]
+        }
+
+   
+    top_level_employees = Employee.objects.filter(reports_to__isnull=True)
+
+    ceo_node = {
+        "name": "Vivek",
+        "title": "Chief Executive Officer",
+        "gender": "Male",
+        "children": [build_hierarchy(emp) for emp in top_level_employees]
+    }
+
+    return Response(ceo_node)
 @api_view(["POST"])
 def time_sheet_detail(request):
    session = WorkSession.objects.all()
