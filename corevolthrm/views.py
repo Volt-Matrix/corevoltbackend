@@ -3,18 +3,19 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework import status
+from rest_framework import status,viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer,UploadDocumentSerializer
 from django.contrib.auth import authenticate,get_user_model
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails
+from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails,UploadDocument
 from datetime import datetime, time,timedelta
 from django.utils import timezone
 from django.core import serializers
@@ -159,7 +160,8 @@ def logoutUser(request):
     return response
 
 class ProfilesView(APIView):
-    parser_classes = (JSONParser, MultiPartParser, FormParser) 
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    permission_classes = [AllowAny]
 
     def get(self, request):
         profiles = Profiles.objects.all()
@@ -167,19 +169,28 @@ class ProfilesView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = ProfilesSerializer(data=request.data)
+        employee_id = request.data.get("employee_id")
+        if not employee_id:
+            return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            profile = Profiles.objects.get(employee_id=employee_id)
+            serializer = ProfilesSerializer(profile, data=request.data)
+        except Profiles.DoesNotExist:
+            serializer = ProfilesSerializer(data=request.data)
+
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)  # 200 for both update/create
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ProfilesDetailView(APIView):
+class ProfilesDetailView(RetrieveUpdateDestroyAPIView):
     parser_classes = (JSONParser, MultiPartParser, FormParser) 
 
     def get(self, request, pk):
         try:
             profile = Profiles.objects.get(pk=pk)
-        except Profiles.sDoesNotExist:
+        except Profiles.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = ProfilesSerializer(profile)
         return Response(serializer.data)
@@ -202,6 +213,83 @@ class ProfilesDetailView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class UploadDocumentView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, *args, **kwargs):
+        # List all uploaded documents
+        documents = UploadDocument.objects.all()
+        serializer = UploadDocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            employee_id = request.data.get("employee_id")
+            doc_type = request.data.get("doc_type")
+            file = request.data.get("file")
+
+            if not employee_id or not doc_type or not file:
+                return Response(
+                    {"error": "Missing required fields"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                profile = Profiles.objects.get(employee_id=employee_id)
+            except Profiles.DoesNotExist:
+                return Response(
+                    {"error": f"No profile found with employee_id: {employee_id}"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            serializer = UploadDocumentSerializer(data={
+                "doc_type": doc_type,
+                "file": file,
+                "profile": profile.id
+            })
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response(
+                {"error": f"TypeError: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+class EmployeeListAPIView(generics.ListAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+class MyEmployeeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            employee = Employee.objects.get(user=request.user)
+            serializer = EmployeeSerializer(employee)
+            return Response(serializer.data)
+        except Employee.DoesNotExist:
+            return Response({'detail': 'Employee data not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class EmployeeViewSet(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
     
 class LeaveApplicationListCreate(generics.ListCreateAPIView):
     serializer_class = LeaveApplicationSerializer

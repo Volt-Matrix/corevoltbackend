@@ -3,7 +3,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 from .views import ProfilesView,ProfilesDetailView
 
-from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView
+from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView,UploadDocumentView,EmployeeListAPIView,e
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import approve_leave, reject_leave,total_users_count
@@ -19,6 +19,9 @@ urlpatterns = [
     path('logout/',views.logoutUser),
     path('profiles/', ProfilesView.as_view(), name='profile-list'),
     path('profiles/<int:pk>/', ProfilesDetailView.as_view(), name='profile-detail'),
+    path('upload-documents/', UploadDocumentView.as_view(), name='upload-documents'),
+    path('employees/', EmployeeListAPIView.as_view(), name='employee-list'),
+    # path('employee-by-email/', employee_by_email, name='employee-by-email'),
     path('leave/', LeaveApplicationListCreate.as_view(), name='leave-list'),
     path('leave/<int:pk>/', LeaveApplicationDetail.as_view(), name='leave-detail'),
     path('leave/<int:pk>/approve/', approve_leave, name='leave-approve'),
