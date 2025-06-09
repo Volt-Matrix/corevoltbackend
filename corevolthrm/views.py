@@ -163,16 +163,18 @@ class ProfilesView(APIView):
     parser_classes = (JSONParser, MultiPartParser, FormParser)
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        profiles = Profiles.objects.all()
-        serializer = ProfilesSerializer(profiles, many=True)
-        return Response(serializer.data)
-
     def post(self, request):
         employee_id = request.data.get("employee_id")
         if not employee_id:
             return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+        #Find the employee
+        try:
+            employee = Employee.objects.get(employee_id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        #Create or update profile
         try:
             profile = Profiles.objects.get(employee_id=employee_id)
             serializer = ProfilesSerializer(profile, data=request.data)
@@ -180,10 +182,10 @@ class ProfilesView(APIView):
             serializer = ProfilesSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)  # 200 for both update/create
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer.save(employee=employee)  # 🔗 Link the profile to the employee
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class ProfilesDetailView(RetrieveUpdateDestroyAPIView):
     parser_classes = (JSONParser, MultiPartParser, FormParser) 
 
@@ -212,7 +214,8 @@ class ProfilesDetailView(RetrieveUpdateDestroyAPIView):
         except Profiles.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         profile.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"message": "Profile deleted"}, status=status.HTTP_200_OK)
+
     
 class UploadDocumentView(APIView):
     parser_classes = [MultiPartParser, FormParser]

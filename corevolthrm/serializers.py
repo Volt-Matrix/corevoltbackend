@@ -49,6 +49,9 @@ class ProfilesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profiles
         fields = '__all__'
+        extra_kwargs = {
+            'employee': {'required': False},  # Allow view to set it manually
+        }
 
 class UploadDocumentSerializer(serializers.ModelSerializer):
     profile = serializers.PrimaryKeyRelatedField(queryset=Profiles.objects.all()) 
