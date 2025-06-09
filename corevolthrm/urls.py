@@ -3,7 +3,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 from .views import ProfilesView,ProfilesDetailView
 
-from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView,UploadDocumentView,EmployeeListAPIView,e
+from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView,UploadDocumentView,EmployeeListAPIView
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import approve_leave, reject_leave,total_users_count
