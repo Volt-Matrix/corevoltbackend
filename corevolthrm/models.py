@@ -100,7 +100,6 @@ class EmployeeDesignation(models.Model):
         return self.designationName
 
 class Profiles(models.Model):
-    employee = models.OneToOneField('Employee', on_delete=models.CASCADE, related_name='profile')
     employee_id = models.CharField(max_length=10, unique=True)
     full_name = models.CharField(max_length=100)
     date_of_birth = models.DateField(null=True, blank=True)  # Make DOB optional
