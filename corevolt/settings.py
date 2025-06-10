@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'corevolthrm',
     'home',
     'attendance',
+    'management'
 ]
 
 MIDDLEWARE = [
