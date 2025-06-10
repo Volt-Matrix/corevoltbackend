@@ -441,6 +441,4 @@ def add_time_expense(request):
         return Response(serializedTimeSheet.data)
     except:
          return Response({"error":'Unable to add details to daily log'},status=status.HTTP_400_BAD_REQUEST)
-    
-
 
