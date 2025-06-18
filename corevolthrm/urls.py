@@ -35,7 +35,8 @@ urlpatterns = [
     path('time-sheet-details/',views.time_sheet_detail),
     path('daily-log/',views.daily_log),
     path('daily-log-delete-expense/<int:session_id>/<int:expense_id>/',views.delete_expense_daily_log),
-    path('attendance-add-time-expense/',views.add_time_expense)
+    path('attendance-add-time-expense/',views.add_time_expense),
+    path('submit-timesheet/<int:sessionId>/',views.submit_time_Sheet)
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
