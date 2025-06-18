@@ -22,7 +22,7 @@ from .models import Employee, Profiles
 from .serializers import ProfilesSerializer
 
 from rest_framework.authentication import SessionAuthentication
- 
+from .customPermission.customPermissionClasss import IsManagerOrAdmin
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):
         return
@@ -330,7 +330,7 @@ def clock_out(request):
 class LeaveRequestListAPIView(generics.ListCreateAPIView):
     queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsManagerOrAdmin]
    
 class UpdateLeaveStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
