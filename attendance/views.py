@@ -10,13 +10,13 @@ from datetime import time as dt_time
 from django.db.models import Q, Sum
 from corevolthrm.models import Employee, WorkSession, TeamName
 from attendance.serializers import DailyWorkSessionDetailSerializer, AttendanceOverviewRowSerializer, TeamNameSerializer
-
+from corevolthrm.customPermission.customPermissionClasss import IsManagerOrAdmin
 User = get_user_model()
 
 # Create your views here.
 # API View for Attendance Overview Data
 class AttendanceOverviewAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsManagerOrAdmin]
 
     def get(self, request, *args, **kwargs):
         date_param = request.query_params.get('date', timezone.now().strftime('%Y-%m-%d'))

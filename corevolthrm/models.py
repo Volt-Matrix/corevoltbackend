@@ -243,6 +243,7 @@ class WorkSession(models.Model):
         ('Pending', 'Pending'),
         ('Approved', 'Approved'),
         ('Rejected', 'Rejected'),
+        ('Submitted','Submitted')
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     clock_in = models.DateTimeField()

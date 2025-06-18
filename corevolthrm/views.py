@@ -22,7 +22,7 @@ from .models import Employee, Profiles
 from .serializers import ProfilesSerializer
 
 from rest_framework.authentication import SessionAuthentication
- 
+from .customPermission.customPermissionClasss import IsManagerOrAdmin
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):
         return
@@ -330,7 +330,7 @@ def clock_out(request):
 class LeaveRequestListAPIView(generics.ListCreateAPIView):
     queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsManagerOrAdmin]
    
 class UpdateLeaveStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -443,4 +443,16 @@ def add_time_expense(request):
          return Response({"error":'Unable to add details to daily log'},status=status.HTTP_400_BAD_REQUEST)
     
 
+# submit_time_Sheet
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def submit_time_Sheet(request,sessionId):
+    if request.method =='PUT':
+        timeSheet = WorkSession.objects.get(id=sessionId)
+        timeSheet.approval_status = 'Submitted'
+        timeSheet.save()
+        # print(timeSheet)
+        return Response({"message":'Submit Time Sheet'},status=status.HTTP_200_OK)
 
+    else :
+        return Response({"Error":"Unable to submit"},status=status.HTTP_400_BAD_REQUEST)
