@@ -117,6 +117,32 @@ class Profiles(models.Model):
     def __str__(self):
         return self.full_name
 
+class UploadDocument(models.Model):
+    DOC_TYPE_CHOICES = [
+        ('Aadhar Card', 'Aadhar Card'),
+        ('Driving Licence', 'Driving Licence'),
+        ('PAN Card', 'PAN Card'),
+        ('Passport', 'Passport'),
+        ('Education', 'Education'),
+        ('Experience', 'Experience'),
+    ]
+
+    doc_type = models.CharField(max_length=20, choices=DOC_TYPE_CHOICES)
+    degree = models.CharField(max_length=255, blank=True, null=True)
+    institute = models.CharField(max_length=255, blank=True, null=True)
+
+    job_title = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    duration = models.CharField(max_length=255, blank=True, null=True)
+
+    file = models.FileField(upload_to='upload-documents/')
+    profile = models.ForeignKey(Profiles, on_delete=models.CASCADE, related_name='documents')
+
+    def __str__(self):
+        return f'{self.doc_type} for {self.profile}'
+
+
+
 class TeamName(models.Model):
     name = models.CharField(max_length=50, unique=True)
     active = models.BooleanField(default=True)
@@ -162,6 +188,14 @@ class Employee(models.Model):
         on_delete=models.CASCADE,
         related_name='employee_profile'
     )
+
+    profile = models.OneToOneField(
+        'Profiles',
+        on_delete=models.CASCADE,
+        related_name='employee_profile',
+        null=True,
+        blank=True  # Optional if you want to allow employees without profile yet
+    )
     
     # Foreign Key relationships to other models
     role = models.ForeignKey(
@@ -175,15 +209,6 @@ class Employee(models.Model):
         on_delete=models.PROTECT,
         related_name='employees'
     )
-
-    reports_to = models.ForeignKey(
-    'self',
-    null=True,
-    blank=True,
-    on_delete=models.SET_NULL,
-    related_name='subordinates'
-)
-
     
     team = models.ForeignKey(
         'TeamName',
