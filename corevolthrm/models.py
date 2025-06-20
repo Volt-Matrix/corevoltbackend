@@ -146,7 +146,6 @@ class UploadDocument(models.Model):
 class TeamName(models.Model):
     name = models.CharField(max_length=50, unique=True)
     active = models.BooleanField(default=True)
-    total_members = models.PositiveIntegerField(default=0)
     manager = models.ForeignKey(
         'Employee', 
         on_delete=models.CASCADE, 
