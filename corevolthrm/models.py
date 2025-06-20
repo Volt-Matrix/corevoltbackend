@@ -185,7 +185,7 @@ class Employee(models.Model):
     user = models.OneToOneField(
         User, 
         on_delete=models.CASCADE,
-        related_name='employee_profile'
+        related_name='employee_obj'
     )
 
     profile = models.OneToOneField(
