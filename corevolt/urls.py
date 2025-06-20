@@ -22,5 +22,5 @@ urlpatterns = [
     path('', include('corevolthrm.urls')),
     path('', include('home.urls')),
     path('', include('attendance.urls')),
-    # path('', include('employee_structure.urls')),
+    path('', include('employee_structure.urls')),
 ]
