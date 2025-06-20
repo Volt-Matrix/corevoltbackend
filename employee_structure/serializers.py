@@ -87,7 +87,7 @@ class TeamNameSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TeamName
-        fields = ['id', 'name', 'active', 'total_members', 'manager', 'members', 'manager_id', 'member_ids', 'calculated_total_members']
+        fields = ['id', 'name', 'active', 'manager', 'members', 'manager_id', 'member_ids', 'calculated_total_members']
     
     def get_calculated_total_members(self, obj):
         return obj.members.count()
