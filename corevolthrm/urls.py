@@ -3,10 +3,11 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 from .views import ProfilesView,ProfilesDetailView
 
-from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView
+from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveRequestListAPIView,UpdateLeaveStatusAPIView,UploadDocumentView,EmployeeListAPIView
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import approve_leave, reject_leave,total_users_count
+from .views import get_team_hierarchy
 
 from .views import MyAssetsAPIView, AssetRequestCreateAPIView,UpdateAssetRequestStatusAPIView
 from .views import (
@@ -32,6 +33,9 @@ urlpatterns = [
     path('logout/',views.logoutUser),
     path('profiles/', ProfilesView.as_view(), name='profile-list'),
     path('profiles/<int:pk>/', ProfilesDetailView.as_view(), name='profile-detail'),
+    path('upload-documents/', UploadDocumentView.as_view(), name='upload-documents'),
+    path('employees/', EmployeeListAPIView.as_view(), name='employee-list'),
+    # path('employee-by-email/', employee_by_email, name='employee-by-email'),
     path('leave/', LeaveApplicationListCreate.as_view(), name='leave-list'),
     path('leave/<int:pk>/', LeaveApplicationDetail.as_view(), name='leave-detail'),
     path('leave/<int:pk>/approve/', approve_leave, name='leave-approve'),
@@ -44,6 +48,7 @@ urlpatterns = [
     path('api/leave-requests/<int:pk>/', UpdateLeaveStatusAPIView.as_view(), name='update-leave-status'),
     path('api/total-users/', total_users_count),
     path('my_sessions/',views.my_session),
+    path("api/team-hierarchy/", get_team_hierarchy, name="team-hierarchy"),
     path('time-sheet-details/',views.time_sheet_detail),
     path('daily-log/',views.daily_log),
     path('daily-log-delete-expense/<int:session_id>/<int:expense_id>/',views.delete_expense_daily_log),
@@ -63,6 +68,7 @@ urlpatterns = [
     
 
 
+    path('submit-timesheet/<int:sessionId>/',views.submit_time_Sheet)
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

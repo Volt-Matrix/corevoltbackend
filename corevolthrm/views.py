@@ -3,22 +3,23 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework import status
+from rest_framework import status,viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
+from rest_framework.generics import RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer
+from .serializers import UserRegistrationSerializer, LeaveApplicationSerializer,EmployeeSerializer,WorkSessionSerializer,LeaveRequestSerializer,TimeSheetDetailsSerializer,UploadDocumentSerializer
 from django.contrib.auth import authenticate,get_user_model
 from django.views.decorators.http import require_POST
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
-from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails
-from datetime import timedelta
+from corevolthrm.models import LeaveApplication,Employee,WorkSession,LeaveApplication,LeaveRequest,TimeSheetDetails,UploadDocument
+from datetime import datetime, time,timedelta
 from django.utils import timezone
 from django.core import serializers
-from .models import Profiles
+from .models import Employee, Profiles
 from .serializers import ProfilesSerializer
 
 from rest_framework import viewsets, permissions
@@ -34,7 +35,7 @@ from .serializers import AssignedEmployeeSerializer,MyAssetListSerializer
 
 
 from rest_framework.authentication import SessionAuthentication
- 
+from .customPermission.customPermissionClasss import IsManagerOrAdmin
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):
         return
@@ -171,27 +172,39 @@ def logoutUser(request):
     return response
 
 class ProfilesView(APIView):
-    parser_classes = (JSONParser, MultiPartParser, FormParser) 
-
-    def get(self, request):
-        profiles = Profiles.objects.all()
-        serializer = ProfilesSerializer(profiles, many=True)
-        return Response(serializer.data)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = ProfilesSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        employee_id = request.data.get("employee_id")
+        if not employee_id:
+            return Response({"error": "employee_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-class ProfilesDetailView(APIView):
+        #Find the employee
+        try:
+            employee = Employee.objects.get(employee_id=employee_id)
+        except Employee.DoesNotExist:
+            return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        #Create or update profile
+        try:
+            profile = Profiles.objects.get(employee_id=employee_id)
+            serializer = ProfilesSerializer(profile, data=request.data)
+        except Profiles.DoesNotExist:
+            serializer = ProfilesSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(employee=employee)  # 🔗 Link the profile to the employee
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class ProfilesDetailView(RetrieveUpdateDestroyAPIView):
     parser_classes = (JSONParser, MultiPartParser, FormParser) 
 
     def get(self, request, pk):
         try:
             profile = Profiles.objects.get(pk=pk)
-        except Profiles.sDoesNotExist:
+        except Profiles.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = ProfilesSerializer(profile)
         return Response(serializer.data)
@@ -213,7 +226,85 @@ class ProfilesDetailView(APIView):
         except Profiles.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         profile.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"message": "Profile deleted"}, status=status.HTTP_200_OK)
+
+    
+class UploadDocumentView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, *args, **kwargs):
+        # List all uploaded documents
+        documents = UploadDocument.objects.all()
+        serializer = UploadDocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            employee_id = request.data.get("employee_id")
+            doc_type = request.data.get("doc_type")
+            file = request.data.get("file")
+
+            if not employee_id or not doc_type or not file:
+                return Response(
+                    {"error": "Missing required fields"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                profile = Profiles.objects.get(employee_id=employee_id)
+            except Profiles.DoesNotExist:
+                return Response(
+                    {"error": f"No profile found with employee_id: {employee_id}"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            serializer = UploadDocumentSerializer(data={
+                "doc_type": doc_type,
+                "file": file,
+                "profile": profile.id
+            })
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response(
+                {"error": f"TypeError: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+class EmployeeListAPIView(generics.ListAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+class MyEmployeeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            employee = Employee.objects.get(user=request.user)
+            serializer = EmployeeSerializer(employee)
+            return Response(serializer.data)
+        except Employee.DoesNotExist:
+            return Response({'detail': 'Employee data not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class EmployeeViewSet(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
     
 class LeaveApplicationListCreate(generics.ListCreateAPIView):
     serializer_class = LeaveApplicationSerializer
@@ -278,6 +369,15 @@ def check_clockIn(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def clock_in(request):
+    if WorkSession.objects.filter(user=request.user, clock_in__date=timezone.localdate(),clock_out__date = timezone.localdate()).exists():
+        currentlog = WorkSession.objects.get(user=request.user,clock_in__date=timezone.localdate(),clock_out__date = timezone.localdate())
+        if(currentlog):
+            currentlog.clock_out = None
+            currentlog.next_clock_in = timezone.now()
+            currentlog.save()
+            workSession = WorkSessionSerializer(currentlog)
+            print(workSession.data)
+            return Response({'clock_in':True,'session':[workSession.data]},status=status.HTTP_200_OK)
     if not WorkSession.objects.filter(user=request.user, clock_out__isnull=True).exists():
        workSession =  WorkSession.objects.create(user=request.user, clock_in=timezone.now())
        session = WorkSessionSerializer(workSession)
@@ -291,21 +391,49 @@ def clock_in(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])   
 def clock_out(request):
+    def parse_duration(duration):
+    
+        if isinstance(duration, timedelta):
+        # Already a timedelta object
+            return duration
+        elif isinstance(duration, str):
+        # Parse string format
+            try:
+            # Handle format like "0:00:02.875683"
+                if '.' in duration:
+                    time_part, microsec_part = duration.split('.')
+                    hours, minutes, seconds = map(int, time_part.split(':'))
+                    microseconds = int(microsec_part.ljust(6, '0')[:6])  # Pad or truncate to 6 digits
+                    return timedelta(hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+                else:
+                    # Handle format like "0:00:02"
+                    hours, minutes, seconds = map(int, duration.split(':'))
+                    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            except Exception as e:
+                print(f"Error parsing duration '{duration}': {e}")
+                return timedelta(0)
+        else:
+            print(f"Unsupported duration type: {type(duration)}")
+            return timedelta(0)
+           
     session = WorkSession.objects.filter(user=request.user, clock_out__isnull=True).first()
+    session.clock_out = timezone.now()
     if session:
-        session.clock_out = timezone.now()
-        # Calculate total work time excluding breaks
-        total_time = session.clock_out - session.clock_in
-        total_breaks = session.total_break_time()
-        session.total_work_time = total_time - total_breaks
-
+        if session.next_clock_in:
+            total_time = session.clock_out - session.next_clock_in + (parse_duration(session.total_work_time) if session.total_work_time else parse_duration('00:00:00'))
+            session.total_work_time = total_time 
+            print('next clock in ')
+        else:
+            total_time = session.clock_out - session.clock_in + (parse_duration(session.total_work_time) if session.total_work_time else parse_duration('00:00:00'))
+            session.total_work_time = total_time
+            print('clock out')
         session.save()
         return Response({'Message':"Successfully clocked out"},status=status.HTTP_200_OK)
 
 class LeaveRequestListAPIView(generics.ListCreateAPIView):
     queryset = LeaveApplication.objects.all()
     serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsManagerOrAdmin]
    
 class UpdateLeaveStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -334,6 +462,30 @@ def my_session(request):
     sessions = WorkSessionSerializer(WorkSessions,many=True)
     return Response({"sessions":sessions.data})
 
+@api_view(['GET'])
+def get_team_hierarchy(request):
+    def build_hierarchy(emp):
+        return {
+            "name": f"{emp.user.first_name} {emp.user.last_name}",
+            "title": emp.designation.designationName,
+            "gender": "Female" if emp.gender == "F" else "Male",
+            "children": [
+                build_hierarchy(sub)
+                for sub in emp.subordinates.all()
+            ]
+        }
+
+   
+    top_level_employees = Employee.objects.filter(reports_to__isnull=True)
+
+    ceo_node = {
+        "name": "Vivek",
+        "title": "Chief Executive Officer",
+        "gender": "Male",
+        "children": [build_hierarchy(emp) for emp in top_level_employees]
+    }
+
+    return Response(ceo_node)
 @api_view(["POST"])
 def time_sheet_detail(request):
    session = WorkSession.objects.all()
@@ -348,7 +500,7 @@ def daily_log(request):
         dataDict = request.data
         from_date = dataDict['fromDate']
         to_date = dataDict['toDate']
-        dailylog = WorkSession.objects.filter(user=request.user,clock_in__range=(from_date,to_date))
+        dailylog = WorkSession.objects.filter(user=request.user,clock_in__date__gte=from_date,clock_in__date__lte=to_date)
         logs = WorkSessionSerializer(dailylog,many=True)
         return Response({"dailyLog":logs.data})
     if request.method =='GET':
@@ -522,5 +674,17 @@ class AssetListByAssetView(generics.ListAPIView):
 
 class EmployeeListView(generics.ListAPIView):
     queryset = Employee.objects.all()
-    serializer_class = AssignedEmployeeSerializer
+    serializer_class = AssignedEmployeeSerializer# submit_time_Sheet
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def submit_time_Sheet(request,sessionId):
+    if request.method =='PUT':
+        timeSheet = WorkSession.objects.get(id=sessionId)
+        timeSheet.approval_status = 'Submitted'
+        timeSheet.save()
+        # print(timeSheet)
+        return Response({"message":'Submit Time Sheet'},status=status.HTTP_200_OK)
+
+    else :
+        return Response({"Error":"Unable to submit"},status=status.HTTP_400_BAD_REQUEST)
  
