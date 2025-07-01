@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from corevolthrm.models import Profiles, LeaveApplication, Employee, WorkSession,TimeSheetDetails
+from corevolthrm.models import Profiles, LeaveApplication, Employee, WorkSession,TimeSheetDetails,LeaveRequest,AssetRequest
+from .models import AssetCategory, Asset
+from .models import AssetList
 
 User = get_user_model()
 
@@ -66,7 +68,73 @@ class WorkSessionSerializer(serializers.ModelSerializer):
         fields = ['id','clock_in', 'clock_out', 'total_work_time','approval_status','timesheet_details']
 class LeaveRequestSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
- 
+
     class Meta:
-        model = LeaveApplication
+        model = LeaveRequest
+        fields = '__all__'
+
+
+
+class MyAssetListSerializer(serializers.ModelSerializer):
+    asset_type = serializers.CharField(source="assetName")
+    serial_number = serializers.CharField(source="assetId")
+    assigned_date = serializers.DateField(source="assignedDate")
+
+    class Meta:
+        model = AssetList
+        fields = ['id', 'asset_type', 'serial_number', 'assigned_date', 'status']
+
+
+class AssetRequestSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.first_name', read_only=True)
+    category = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssetRequest
+        fields = ['id','user_name', 'asset_type','category', 'description', 'request_date', 'status']
+        read_only_fields = ['id', 'request_date', 'status']
+
+    def get_category(self, obj):
+        
+        if obj.asset_type:
+            return obj.asset_type.assetName
+        return "N/A"
+
+
+class AssetCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetCategory
+        fields = '__all__'
+
+class AssetSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+
+    class Meta:
+        model = Asset
+        fields = '__all__'
+
+
+
+class AssignedEmployeeSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Employee
+        fields = ['id', 'employee_id', 'full_name']
+
+    def get_full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}"
+class AssetListSerializer(serializers.ModelSerializer):
+    category = serializers.StringRelatedField() 
+    assignedTo = AssignedEmployeeSerializer(read_only=True)
+    assignedToId = serializers.SlugRelatedField(
+        source='assignedTo',
+        slug_field='employee_id',
+        queryset=Employee.objects.all(),
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = AssetList
         fields = '__all__'

@@ -270,7 +270,14 @@ class LeaveRequest(models.Model):
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,related_name='leave_requests')
-    department = models.CharField(max_length=100,blank=True,null=True)
+    department = models.ForeignKey(
+        'TeamName',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='leave_requests',
+        help_text="Team (department) to which the employee belongs"
+    )
     leaveType = models.CharField(max_length=50,choices=LEAVE_TYPES)
     startDate = models.DateField()
     endDate= models.DateField()
@@ -288,3 +295,124 @@ class TimeSheetDetails(models.Model):
     description = models.CharField() 
     def __str__(self):
         return self.description
+    
+
+
+class AssetRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='asset_requests')
+    asset_type = models.ForeignKey('Asset', on_delete=models.CASCADE, null=True)
+    description = models.TextField()
+    request_date = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50, default='Pending')
+
+    def __str__(self):
+        return f"Request by {self.user.email} for {self.category}"
+
+
+class AssetCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Asset(models.Model):
+    category = models.ForeignKey(AssetCategory, on_delete=models.CASCADE, related_name='assets')
+    assetName = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    total = models.PositiveIntegerField()
+    available = models.PositiveIntegerField()
+    status = models.CharField(max_length=20, choices=[('Active', 'Active'), ('Inactive', 'Inactive')])
+
+    def __str__(self):
+        return f"{self.category.name}: {self.assetName}"
+    
+    def save(self, *args, **kwargs):
+        from .models import AssetList  
+
+        is_new = self.pk is None
+        prev_total = 0
+
+        if not is_new:
+            try:
+                prev_total = Asset.objects.get(pk=self.pk).total
+            except Asset.DoesNotExist:
+                pass
+
+        super().save(*args, **kwargs)  
+
+        # Add new AssetList items if total increased
+        if self.total > prev_total:
+            current_items = AssetList.objects.filter(asset=self)
+            existing_ids = set(current_items.values_list('assetId', flat=True))
+
+            prefix = self.assetName[:3].upper()
+            index = 1
+            added = 0
+            to_add = self.total - prev_total
+
+            while added < to_add:
+                new_id = f"{prefix}-{self.pk}-{index:03}"
+                if new_id not in existing_ids:
+                    AssetList.objects.create(
+                        asset=self,
+                        assetName=self.assetName,
+                        assetId=new_id,
+                        status="Available"
+                    )
+                    added += 1
+                index += 1
+
+        elif self.total < prev_total:
+            to_remove = prev_total - self.total
+            removable_items = list(AssetList.objects.filter(asset=self, status="Available").order_by('-id')[:to_remove])
+            count_removed = len(removable_items)
+
+            if count_removed < to_remove:
+                print(f"Only {count_removed} available assets found to delete (needed {to_remove})")
+
+            for item in removable_items:
+                item.delete()
+
+
+    def update_total_and_available(self):
+    
+        total = self.asset_items.count()
+        available = self.asset_items.filter(status="Available").count()
+        Asset.objects.filter(pk=self.pk).update(total=total, available=available)
+class AssetList(models.Model):
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='asset_items',null=True,blank=True)  
+    assetName = models.CharField(max_length=100)
+    assetId = models.CharField(max_length=50, unique=True)
+    status = models.CharField(
+        max_length=50,
+        choices=[
+            ("Available", "Available"),
+            ("Assigned", "Assigned"),
+            ("In Repair", "In Repair"),
+            ("Retired", "Retired"),
+            ("Lost", "Lost"),
+        ],
+        default="Available"
+    )
+    assignedTo = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_assets'
+    )
+    assignedDate = models.DateField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.assetName} ({self.assetId})"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.asset:
+            self.asset.update_total_and_available()
+    
+    def delete(self, *args, **kwargs):
+        asset = self.asset 
+        super().delete(*args, **kwargs)
+        if asset:
+            asset.update_total_and_available()

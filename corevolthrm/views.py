@@ -21,6 +21,18 @@ from django.core import serializers
 from .models import Profiles
 from .serializers import ProfilesSerializer
 
+from rest_framework import viewsets, permissions
+from .models import AssetRequest
+from .serializers import AssetRequestSerializer
+from datetime import date
+from .models import AssetCategory, Asset
+from .serializers import AssetCategorySerializer, AssetSerializer
+from .models import AssetList
+from .serializers import AssetListSerializer
+from .models import Employee
+from .serializers import AssignedEmployeeSerializer,MyAssetListSerializer 
+
+
 from rest_framework.authentication import SessionAuthentication
  
 class CsrfExemptSessionAuthentication(SessionAuthentication):
@@ -381,5 +393,134 @@ def add_time_expense(request):
     except:
          return Response({"error":'Unable to add details to daily log'},status=status.HTTP_400_BAD_REQUEST)
     
+class MyAssetsAPIView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = MyAssetListSerializer  
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'employee_profile'):
+            return AssetList.objects.filter(assignedTo=user.employee_profile)
+        return AssetList.objects.none()
+class AssetRequestCreateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):  
+        requests = AssetRequest.objects.all()
+        serializer = AssetRequestSerializer(requests, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = AssetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UpdateAssetRequestStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            asset_request = AssetRequest.objects.get(pk=pk)
+            status_value = request.data.get("status")
+
+            if status_value not in ["Approved", "Rejected"]:
+                return Response({"error": "Invalid status"}, status=status.HTTP_400_BAD_REQUEST)
+
+           
+            if status_value == "Rejected":
+                asset_request.status = "Rejected"
+                asset_request.save()
+                serializer = AssetRequestSerializer(asset_request)
+                return Response(serializer.data, status=200)
+
+            
+            already_approved = asset_request.status == "Approved"
+            if status_value == "Approved" and not already_approved:
+                try:
+                    employee = asset_request.user.employee_profile
+                except AttributeError:
+                    return Response({"error": "User is not linked to Employee"}, status=400)
+
+                asset = asset_request.asset_type
+                if not asset:
+                    return Response({"error": "No asset type found in this request"}, status=404)
+
+                available_asset = AssetList.objects.filter(asset=asset, status="Available").first()
+                if not available_asset:
+                    return Response({"error": "Out of stock: No available assets"}, status=400)
+
+                
+                available_asset.status = "Assigned"
+                available_asset.assignedTo = employee
+                available_asset.assignedDate = date.today()
+                available_asset.save()
+
+                asset.update_total_and_available()
+
+                
+                asset_request.status = "Approved"
+                asset_request.save()
+
+            serializer = AssetRequestSerializer(asset_request)
+            return Response(serializer.data, status=200)
+
+        except AssetRequest.DoesNotExist:
+            return Response({"error": "AssetRequest not found"}, status=404)
 
 
+class AssetCategoryListCreateAPIView(generics.ListCreateAPIView):
+    queryset = AssetCategory.objects.all()
+    serializer_class = AssetCategorySerializer
+
+
+class AssetListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Asset.objects.all()
+    serializer_class = AssetSerializer
+
+class AssetRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Asset.objects.all()
+    serializer_class = AssetSerializer
+
+class AssetListListCreateAPIView(generics.ListCreateAPIView):
+    
+    serializer_class = AssetListSerializer
+    def get_queryset(self):
+        status = self.request.query_params.get('status')
+        if status:
+            return AssetList.objects.filter(status=status)
+        return AssetList.objects.all()
+
+
+class AssetListRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = AssetList.objects.all()
+    serializer_class = AssetListSerializer
+
+    
+
+
+class AssetListListCreateAPIView(generics.ListCreateAPIView):
+    serializer_class = AssetListSerializer
+
+    def get_queryset(self):
+        queryset = AssetList.objects.all()
+        status = self.request.query_params.get('status')
+        asset_id = self.request.query_params.get('asset')  
+
+        if status:
+            queryset = queryset.filter(status=status)
+        if asset_id:
+            queryset = queryset.filter(asset_id=asset_id)  
+        return queryset
+class AssetListByAssetView(generics.ListAPIView):
+    serializer_class = AssetListSerializer
+
+    def get_queryset(self):
+        asset_id = self.kwargs['asset_id']
+        return AssetList.objects.filter(asset_id=asset_id)
+
+class EmployeeListView(generics.ListAPIView):
+    queryset = Employee.objects.all()
+    serializer_class = AssignedEmployeeSerializer
+ 
