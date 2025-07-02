@@ -3,6 +3,8 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
 from .models import CustomUser, LeaveApplication
 from corevolthrm.models import Role,EmployeeDesignation,TeamName,Employee,WorkSession,Break,LeaveRequest,TimeSheetDetails
+from .models import AssetRequest,Asset
+
 
 
 @admin.register(LeaveApplication)
@@ -16,6 +18,9 @@ class LeaveApplicationAdmin(admin.ModelAdmin):
     get_user_fullname.short_description = 'Employee Name'
 
 
+
+
+
 # Register your models here.
 admin.site.register(CustomUser)
 admin.site.register(Role)
@@ -26,4 +31,5 @@ admin.site.register(WorkSession)
 admin.site.register(Break)
 admin.site.register(LeaveRequest)
 admin.site.register(TimeSheetDetails)
-
+admin.site.register(AssetRequest)
+admin.site.register(Asset)

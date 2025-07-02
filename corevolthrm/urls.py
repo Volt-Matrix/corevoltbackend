@@ -9,6 +9,20 @@ from django.conf.urls.static import static
 from .views import approve_leave, reject_leave,total_users_count
 from .views import get_team_hierarchy
 
+from .views import MyAssetsAPIView, AssetRequestCreateAPIView,UpdateAssetRequestStatusAPIView
+from .views import (
+    AssetCategoryListCreateAPIView,
+    AssetListCreateAPIView,
+    AssetRetrieveUpdateDestroyAPIView,
+)
+from .views import (
+    AssetListListCreateAPIView,
+    AssetListRetrieveUpdateDestroyAPIView,
+    AssetListByAssetView,
+    EmployeeListView,
+)
+
+
 urlpatterns = [
     path('profile/', views.profile_list),
     path('register/',views.RegisterView),
@@ -39,6 +53,21 @@ urlpatterns = [
     path('daily-log/',views.daily_log),
     path('daily-log-delete-expense/<int:session_id>/<int:expense_id>/',views.delete_expense_daily_log),
     path('attendance-add-time-expense/',views.add_time_expense),
+    path('api/my-assets/', MyAssetsAPIView.as_view(), name='my-assets'),
+    path('asset-request/', AssetRequestCreateAPIView.as_view(), name='asset-request'),
+    path('asset-request/<int:pk>/', UpdateAssetRequestStatusAPIView.as_view(), name='update_asset_status'),
+
+    path('api/asset-categories/', AssetCategoryListCreateAPIView.as_view(), name='asset-category-list-create'),
+    path('api/assets/', AssetListCreateAPIView.as_view(), name='asset-list-create'),
+    path('api/assets/<int:pk>/', AssetRetrieveUpdateDestroyAPIView.as_view(), name='asset-detail'),
+    path('api/asset-list/', AssetListListCreateAPIView.as_view(), name='asset-list-create'),
+    path('api/asset-list/<int:pk>/', AssetListRetrieveUpdateDestroyAPIView.as_view(), name='asset-detail'),
+    path('api/assets/<int:asset_id>/items/', AssetListByAssetView.as_view(), name='asset-items-by-asset'),
+    path('api/employees/', EmployeeListView.as_view(), name='employee-list'),
+
+    
+
+
     path('submit-timesheet/<int:sessionId>/',views.submit_time_Sheet)
 ]
 
