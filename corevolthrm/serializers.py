@@ -74,67 +74,11 @@ class UploadDocumentSerializer(serializers.ModelSerializer):
         return data
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-    email = serializers.SerializerMethodField()
-    phone = serializers.SerializerMethodField()
-    city = serializers.SerializerMethodField()
-    country = serializers.SerializerMethodField()
-    profile_picture = serializers.SerializerMethodField()
-
-    username = serializers.CharField(source='user.username', read_only=True)
-    user_email = serializers.EmailField(source='user.email', read_only=True)
-
     class Meta:
         model = Employee
-        fields = [
-            'id',
-            'employee_id',
-            'gender',
-            'employment_status',
-            'birthday',
-            'username',
-            'user_email',
-            'full_name',
-            'email',
-            'phone',
-            'city',
-            'country',
-            'profile_picture',
-        ]
+        fields = '__all__'
+        read_only_fields = ['id', 'user', 'employee_id', 'created_at', 'updated_at']
 
-    def get_full_name(self, obj):
-        if obj.profile:
-            return obj.profile.full_name
-        return ''
-
-    def get_email(self, obj):
-        if obj.profile:
-            return obj.profile.email
-        return ''
-
-    def get_phone(self, obj):
-        if obj.profile:
-            return obj.profile.phone
-        return ''
-
-    def get_city(self, obj):
-        if obj.profile:
-            return obj.profile.city
-        return ''
-
-    def get_country(self, obj):
-        if obj.profile:
-            return obj.profile.country
-        return ''
-
-    def get_profile_picture(self, obj):
-        if obj.profile and obj.profile.profile_picture:
-            request = self.context.get('request')
-            url = obj.profile.profile_picture.url
-            if request:
-                return request.build_absolute_uri(url)
-            return url
-        return ''
 
 class TimeSheetDetailsSerializer(serializers.ModelSerializer):
     class Meta:

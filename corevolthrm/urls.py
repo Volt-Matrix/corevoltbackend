@@ -7,7 +7,7 @@ from .views import LeaveApplicationListCreate, LeaveApplicationDetail,LeaveReque
 from django.conf import settings
 from django.conf.urls.static import static
 from .views import approve_leave, reject_leave,total_users_count
-from .views import get_team_hierarchy
+from .views import get_team_hierarchy,MyEmployeeView
 
 from .views import MyAssetsAPIView, AssetRequestCreateAPIView,UpdateAssetRequestStatusAPIView
 from .views import (
@@ -34,7 +34,7 @@ urlpatterns = [
     path('profiles/', ProfilesView.as_view(), name='profile-list'),
     path('profiles/<int:pk>/', ProfilesDetailView.as_view(), name='profile-detail'),
     path('upload-documents/', UploadDocumentView.as_view(), name='upload-documents'),
-    path('employees/', EmployeeListAPIView.as_view(), name='employee-list'),
+    path('employees/', MyEmployeeView.as_view(), name='employee-list'),
     # path('employee-by-email/', employee_by_email, name='employee-by-email'),
     path('leave/', LeaveApplicationListCreate.as_view(), name='leave-list'),
     path('leave/<int:pk>/', LeaveApplicationDetail.as_view(), name='leave-detail'),

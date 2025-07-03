@@ -285,7 +285,7 @@ class EmployeeListAPIView(generics.ListAPIView):
         context.update({"request": self.request})
         return context
 class MyEmployeeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         try:
@@ -293,8 +293,18 @@ class MyEmployeeView(APIView):
             serializer = EmployeeSerializer(employee)
             return Response(serializer.data)
         except Employee.DoesNotExist:
-            return Response({'detail': 'Employee data not found.'}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request):
+        try:
+            employee = Employee.objects.get(user=request.user)
+            serializer = EmployeeSerializer(employee, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Employee.DoesNotExist:
+            return Response({'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND)        
 
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()

@@ -4,7 +4,7 @@ from django.conf import settings
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta,datetime
 
 from datetime import datetime
 # Create your models here.
@@ -174,41 +174,30 @@ class Employee(models.Model):
         ('terminated', 'Terminated'),
         ('on_leave', 'On Leave'),
     ]
-    
+
     GENDER_CHOICES = [
         ('M', 'Male'),
         ('F', 'Female'),
         ('O', 'Other'),
     ]
-    
-    # Link to CustomUser (One-to-One relationship)
+
     user = models.OneToOneField(
-        User, 
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='employee_obj'
+        related_name='employee_profile'
     )
 
-    profile = models.OneToOneField(
-        'Profiles',
-        on_delete=models.CASCADE,
-        related_name='employee_profile',
-        null=True,
-        blank=True  # Optional if you want to allow employees without profile yet
-    )
-    
-    # Foreign Key relationships to other models
+
     role = models.ForeignKey(
         'Role',
         on_delete=models.PROTECT,
         related_name='employees'
     )
-    
     designation = models.ForeignKey(
         'EmployeeDesignation',
         on_delete=models.PROTECT,
         related_name='employees'
     )
-    
     team = models.ForeignKey(
         'TeamName',
         on_delete=models.SET_NULL,
@@ -216,52 +205,37 @@ class Employee(models.Model):
         blank=True,
         related_name='team_members'
     )
-    
-    # Employee specific fields
-    employee_id = models.CharField(
-        max_length=20,
-        unique=True,
-        help_text="Unique employee identifier"
-    )
-    gender = models.CharField(
-        max_length=1,
-        choices=GENDER_CHOICES,
-        blank=True
-    )
-    
-    employment_status = models.CharField(
-        max_length=20,
-        choices=EMPLOYMENT_STATUS,
-        default='active'
-    )
 
-    birthday = models.DateField(blank = True, null = True, default = datetime(day=1, month=1, year=1990).date())
-    
-    # Manager relationship (self-referencing foreign key)
-   
+    employee_id = models.CharField(max_length=20, unique=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
+    employment_status = models.CharField(max_length=20, choices=EMPLOYMENT_STATUS, default='active')
+    birthday = models.DateField(blank=True, null=True, default=datetime(1990, 1, 1).date())
+
+    full_name = models.CharField(max_length=255, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    alt_phone = models.CharField(max_length=20, blank=True)
+    current_address = models.TextField(blank=True)
+    permanent_address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    zip_code = models.CharField(max_length=10, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'employees'
-        verbose_name = 'Employee'
-        verbose_name_plural = 'Employees'
         ordering = ['employee_id']
-        
-        # Ensure unique combinations
         constraints = [
-            models.UniqueConstraint(
-                fields=['user'],
-                name='unique_user_employee'
-            )
+            models.UniqueConstraint(fields=['user'], name='unique_user_employee')
         ]
+
     def __str__(self):
         return self.employee_id
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-    def get_is_active(self):
-        """Return the full name from the related user"""
-        return self.employment_status
+    
+    
 class WorkSession(models.Model):
     LEAVE_STATUS_CHOICES = (
         ('Pending', 'Pending'),
